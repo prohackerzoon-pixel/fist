@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Shipment Detail — NexaCargo</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings"><div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div><div class="loading-logo">N</div></div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Logistics</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Loading shipment...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<div class="app-shell" id="app-shell">
+  <div class="main-area">
+    <div class="page-content">
+
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="history.back()">← Back</button>
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span id="detail-tid" class="td-mono" style="font-size:17px;font-weight:800;color:var(--accent);">Loading...</span>
+            <span id="detail-status"></span>
+          </div>
+          <p id="detail-created" style="font-size:11.5px;color:var(--faint);margin-top:2px;"></p>
+        </div>
+        <button class="btn btn-sm btn-secondary" style="margin-left:auto;" id="copy-btn">Copy ID</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr;gap:14px;" id="detail-main">
+        <div class="detail-section">
+          <div class="detail-section-title">📤 Sender</div>
+          <div class="detail-grid" id="sender-info"></div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-section-title">📥 Receiver</div>
+          <div class="detail-grid" id="receiver-info"></div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-section-title">📦 Package</div>
+          <div class="detail-grid" id="package-info"></div>
+        </div>
+        <div class="detail-section">
+          <div class="detail-section-title">📍 Tracking Timeline</div>
+          <div class="timeline" id="timeline"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/layout.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw new Error();
+  initLoadingScreen(['Loading shipment...','Fetching tracking data...'], 2000);
+
+  const shipmentId = getParam('id');
+  if (!shipmentId) { alert('No shipment ID.'); history.back(); }
+
+  function infoRows(containerId, rows) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = rows.filter(([,v]) => v).map(([k,v]) => `
+      <div class="detail-item">
+        <label>${k}</label>
+        <span>${v}</span>
+      </div>`).join('') || '<p style="color:var(--faint);font-size:12.5px;">—</p>';
+  }
+
+  async function loadDetail() {
+    try {
+      const data = await api.get('/user/shipments/' + shipmentId);
+      const s = data.shipment;
+
+      document.getElementById('detail-tid').textContent    = s.tracking_id;
+      document.getElementById('detail-status').innerHTML   = statusBadge(s.current_status);
+      document.getElementById('detail-created').textContent = 'Created ' + fmtDateTime(s.created_at);
+      document.getElementById('copy-btn').onclick = () => {
+        navigator.clipboard.writeText(s.tracking_id);
+        const btn = document.getElementById('copy-btn');
+        const orig = btn.textContent;
+        btn.textContent = 'Copied!'; btn.style.background = 'var(--success)'; btn.style.color = '#000';
+        setTimeout(() => { btn.textContent = orig; btn.style.background = ''; btn.style.color = ''; }, 1800);
+      };
+
+      infoRows('sender-info', [
+        ['Name',    s.sender_name],
+        ['Phone',   s.sender_phone],
+        ['Email',   s.sender_email],
+        ['Address', s.sender_address],
+      ]);
+      infoRows('receiver-info', [
+        ['Name',    s.receiver_name],
+        ['Phone',   s.receiver_phone],
+        ['Email',   s.receiver_email],
+        ['Country', s.receiver_country],
+        ['Address', s.receiver_address],
+      ]);
+      infoRows('package-info', [
+        ['Description',    s.package_description],
+        ['Weight',         s.weight],
+        ['Service Type',   s.service_type?.replace(/_/g,' ')],
+        ['Est. Delivery',  s.estimated_delivery ? fmtDate(s.estimated_delivery) : null],
+        ['Current Location', s.current_location],
+      ]);
+
+      document.getElementById('timeline').innerHTML = renderTimeline(data.timeline);
+    } catch(e) {
+      document.getElementById('detail-tid').textContent = 'Error loading shipment';
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initLayout('shipments');
+    loadDetail();
+  });
+</script>
+</body>
+</html>

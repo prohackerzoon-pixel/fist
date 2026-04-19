@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Track Shipment — NexaCargo</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings"><div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div><div class="loading-logo">N</div></div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Logistics</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Loading tracker...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<div class="app-shell" id="app-shell">
+  <div class="main-area">
+    <div class="page-content">
+
+      <div class="page-header"><div><h1>Track Shipment</h1><p>Enter any tracking ID to see live updates</p></div></div>
+
+      <div class="track-box" style="margin-bottom:18px;">
+        <div class="track-box-title">🔍 Enter Tracking ID</div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:12px;">Looks like: NXC-20260412-8821</p>
+        <div class="track-input-row">
+          <input type="text" class="track-input" id="track-input" placeholder="NXC-XXXXXXXX-XXXX"/>
+          <button class="btn btn-primary" id="track-btn" onclick="doTrack()">Track →</button>
+        </div>
+        <div class="track-error-box" id="track-error"></div>
+      </div>
+
+      <div id="track-result-wrap" style="display:none;">
+        <div class="detail-section">
+          <div id="track-header"></div>
+          <div class="detail-grid" style="margin-bottom:16px;" id="track-info"></div>
+          <div class="detail-section-title">📍 Live Timeline</div>
+          <div class="timeline" id="track-timeline"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/layout.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw new Error();
+  initLoadingScreen(['Loading tracker...'], 1600);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initLayout('track');
+    const preId = getParam('id');
+    if (preId) { document.getElementById('track-input').value = preId; doTrack(); }
+  });
+
+  document.getElementById('track-input').addEventListener('keydown', e => { if(e.key==='Enter') doTrack(); });
+
+  async function doTrack() {
+    const input   = document.getElementById('track-input');
+    const btn     = document.getElementById('track-btn');
+    const errorEl = document.getElementById('track-error');
+    const wrap    = document.getElementById('track-result-wrap');
+    const trackId = input.value.trim().toUpperCase();
+
+    errorEl.classList.remove('show'); wrap.style.display = 'none';
+    if (!trackId) { errorEl.textContent = 'Please enter a tracking ID.'; errorEl.classList.add('show'); return; }
+
+    btn.disabled = true; btn.textContent = 'Searching...';
+
+    try {
+      const data = await api.get('/track/' + trackId);
+      const s = data.shipment;
+      const sc = trackStatusClass(s.current_status);
+
+      document.getElementById('track-header').innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:14px;">
+          <div>
+            <div class="tr-id">${s.tracking_id}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:3px;">Destination: <strong style="color:var(--white);">${s.receiver_country}</strong></div>
+          </div>
+          <div style="text-align:right;">
+            <div class="tr-status ${sc}">${s.current_status}</div>
+            ${s.estimated_delivery ? `<div style="font-size:11px;color:var(--faint);margin-top:5px;">Est. ${fmtDate(s.estimated_delivery)}</div>` : ''}
+            ${s.current_location ? `<div style="font-size:11.5px;color:var(--accent);margin-top:3px;">📍 ${s.current_location}</div>` : ''}
+          </div>
+        </div>`;
+
+      document.getElementById('track-info').innerHTML = [
+        ['Sender', s.sender_name],
+        ['Receiver', s.receiver_name],
+        ['Service', s.service_type?.replace(/_/g,' ')],
+        ['Registered', fmtDateTime(s.created_at)]
+      ].filter(([,v])=>v).map(([k,v])=>`<div class="detail-item"><label>${k}</label><span>${v}</span></div>`).join('');
+
+      document.getElementById('track-timeline').innerHTML = renderTimeline(data.timeline);
+      wrap.style.display = 'block';
+    } catch(e) {
+      errorEl.textContent = e.message || 'Tracking ID not found.';
+      errorEl.classList.add('show');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Track →';
+    }
+  }
+</script>
+</body>
+</html>

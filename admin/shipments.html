@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Shipments — NexaCargo Admin</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings">
+    <div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div>
+    <div class="loading-logo">N</div>
+  </div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Admin Panel</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Loading shipments...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<div class="app-shell" id="app-shell">
+  <div class="main-area">
+    <div class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h1>Shipments</h1>
+          <p id="shipment-count">Loading...</p>
+        </div>
+        <a href="create-shipment.html" class="btn btn-primary">+ New Shipment</a>
+      </div>
+
+      <div class="filter-bar">
+        <input type="text" class="form-control" id="search-input" placeholder="Search tracking ID, sender, receiver..." />
+        <select class="form-control" id="status-filter">
+          <option value="">All Statuses</option>
+          <option>Pending</option>
+          <option>Shipment Registered</option>
+          <option>Picked Up</option>
+          <option>In Transit</option>
+          <option>Arrived at Hub</option>
+          <option>Customs Clearance</option>
+          <option>Out for Delivery</option>
+          <option>Delivered</option>
+          <option>Delayed</option>
+          <option>On Hold</option>
+        </select>
+        <button class="btn btn-secondary" onclick="loadShipments()">🔍 Search</button>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Tracking ID</th><th>Sender</th><th>Receiver</th>
+                <th>Destination</th><th>Service</th><th>Status</th>
+                <th>Date</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="shipments-body">
+              <tr><td colspan="8" class="table-empty">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/layout.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw new Error();
+  initLoadingScreen(['Loading shipments...', 'Fetching records...'], 2000);
+
+  document.getElementById('search-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') loadShipments();
+  });
+
+  async function loadShipments() {
+    const search = document.getElementById('search-input').value.trim();
+    const status = document.getElementById('status-filter').value;
+    const params = new URLSearchParams();
+    if (search) params.append('search', search);
+    if (status) params.append('status', status);
+
+    const tbody = document.getElementById('shipments-body');
+    tbody.innerHTML = '<tr><td colspan="8" class="table-empty">Loading...</td></tr>';
+
+    try {
+      const data = await api.get('/admin/shipments?' + params);
+      document.getElementById('shipment-count').textContent = `${data.total} total shipments`;
+
+      if (!data.shipments.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="table-empty">No shipments found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.shipments.map(s => `
+        <tr>
+          <td>
+            <span class="td-link td-mono" onclick="location.href='shipment-detail.html?id=${s.id}'">${s.tracking_id}</span>
+          </td>
+          <td>${s.sender_name}</td>
+          <td>${s.receiver_name}</td>
+          <td class="td-muted">${s.receiver_country}</td>
+          <td class="td-faint" style="text-transform:capitalize">${(s.service_type||'').replace(/_/g,' ')}</td>
+          <td>${statusBadge(s.current_status || 'Pending')}</td>
+          <td class="td-faint">${fmtDate(s.created_at)}</td>
+          <td>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <button class="btn btn-xs btn-secondary" onclick="location.href='shipment-detail.html?id=${s.id}'">View</button>
+              <button class="btn btn-xs btn-secondary" onclick="location.href='create-shipment.html?edit=${s.id}'">Edit</button>
+              <button class="btn btn-xs btn-danger" onclick="deleteShipment('${s.id}')">Delete</button>
+            </div>
+          </td>
+        </tr>`).join('');
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="8" class="table-empty">Error loading shipments: ${e.message}</td></tr>`;
+    }
+  }
+
+  async function deleteShipment(id) {
+    if (!confirm2('Delete this shipment? This cannot be undone.')) return;
+    try {
+      await api.delete('/admin/shipments/' + id);
+      loadShipments();
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadShipments);
+</script>
+</body>
+</html>

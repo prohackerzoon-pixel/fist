@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Chat Center — NexaCargo Admin</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings">
+    <div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div>
+    <div class="loading-logo">N</div>
+  </div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Admin Panel</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Loading chats...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<div class="app-shell" id="app-shell">
+  <div class="main-area">
+    <div class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h1>Chat Center</h1>
+          <p>Customer support conversations</p>
+        </div>
+      </div>
+
+      <div class="chat-shell">
+        <!-- Sessions -->
+        <div class="chat-sessions">
+          <div class="chat-sessions-header">Conversations <span id="session-count" style="color:var(--accent);"></span></div>
+          <div class="chat-sessions-list" id="sessions-list">
+            <div style="padding:20px;text-align:center;color:var(--faint);font-size:13px;">Loading...</div>
+          </div>
+        </div>
+
+        <!-- Chat main area -->
+        <div class="chat-main" id="chat-main">
+          <div class="chat-empty-state" id="chat-empty">
+            <div style="font-size:40px;">💬</div>
+            <div>Select a conversation to start replying</div>
+          </div>
+          <!-- Active chat (hidden until session selected) -->
+          <div id="chat-active" style="display:none;flex-direction:column;height:100%;">
+            <div class="chat-header">
+              <div>
+                <span id="active-customer-name" style="font-weight:600;font-size:14px;color:#fff;"></span>
+                <span id="active-session-id" style="color:var(--faint);font-size:11px;margin-left:8px;"></span>
+              </div>
+              <button class="btn btn-xs btn-danger" onclick="deleteActiveSession()">Delete Chat</button>
+            </div>
+            <div class="chat-messages" id="chat-messages"></div>
+            <div class="chat-input-area">
+              <input type="text" class="form-control" id="reply-input" placeholder="Type your reply..." />
+              <button class="btn btn-primary" id="send-btn" onclick="sendReply()">Send</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/layout.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw new Error();
+  initLoadingScreen(['Loading chats...'], 1800);
+
+  let activeSessionId = null;
+  let pollInterval = null;
+
+  async function loadSessions() {
+    try {
+      const data = await api.get('/admin/chats');
+      const sessions = data.chats || [];
+      document.getElementById('session-count').textContent = sessions.length ? `(${sessions.length})` : '';
+      const list = document.getElementById('sessions-list');
+      if (!sessions.length) {
+        list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--faint);font-size:13px;">No chats yet.</div>';
+        return;
+      }
+      list.innerHTML = sessions.map(s => `
+        <div class="chat-session-item ${activeSessionId === s.session_id ? 'active' : ''}"
+             onclick="openSession('${s.session_id}','${(s.customer_name||'Customer').replace(/'/g,"\\'")}')">
+          <div class="cs-name">${s.customer_name || 'Anonymous'}</div>
+          <div class="cs-preview">${s.last_message || ''}</div>
+          <div class="cs-time">${fmtDateTime(s.created_at)}</div>
+          ${parseInt(s.unread_count) > 0 ? `<div class="cs-unread">${s.unread_count}</div>` : ''}
+        </div>`).join('');
+    } catch(e) { console.error(e); }
+  }
+
+  async function openSession(sessionId, customerName) {
+    activeSessionId = sessionId;
+
+    document.getElementById('chat-empty').style.display = 'none';
+    const activeEl = document.getElementById('chat-active');
+    activeEl.style.display = 'flex';
+
+    document.getElementById('active-customer-name').textContent = customerName;
+    document.getElementById('active-session-id').textContent = '#' + sessionId.slice(0,8);
+
+    loadSessions(); // Re-render active state
+
+    await loadMessages();
+
+    // Poll for new messages
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(loadMessages, 5000);
+  }
+
+  async function loadMessages() {
+    if (!activeSessionId) return;
+    try {
+      const data = await api.get('/admin/chats/' + activeSessionId);
+      const msgs = data.messages || [];
+      const container = document.getElementById('chat-messages');
+      container.innerHTML = msgs.map(m => `
+        <div class="msg-row ${m.sender}">
+          <div class="msg-bubble ${m.sender}">
+            <div>${m.message}</div>
+            <div class="msg-time">${fmtTime(m.created_at)}</div>
+          </div>
+        </div>`).join('');
+      container.scrollTop = container.scrollHeight;
+    } catch(e) { console.error(e); }
+  }
+
+  async function sendReply() {
+    const input = document.getElementById('reply-input');
+    const msg = input.value.trim();
+    if (!msg || !activeSessionId) return;
+
+    const btn = document.getElementById('send-btn');
+    btn.disabled = true;
+    btn.textContent = '...';
+
+    try {
+      await api.post('/admin/chats/' + activeSessionId, { message: msg });
+      input.value = '';
+      loadMessages();
+    } catch(e) { alert('Failed to send: ' + e.message); }
+    finally {
+      btn.disabled = false;
+      btn.textContent = 'Send';
+    }
+  }
+
+  async function deleteActiveSession() {
+    if (!activeSessionId) return;
+    if (!confirm2('Delete this entire chat session?')) return;
+    try {
+      await api.delete('/admin/chats/' + activeSessionId);
+      activeSessionId = null;
+      if (pollInterval) clearInterval(pollInterval);
+      document.getElementById('chat-empty').style.display = 'flex';
+      document.getElementById('chat-active').style.display = 'none';
+      loadSessions();
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  document.getElementById('reply-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') sendReply();
+  });
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadSessions();
+    setInterval(loadSessions, 10000); // Refresh sessions every 10s
+  });
+</script>
+</body>
+</html>

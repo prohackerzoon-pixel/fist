@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Notifications — NexaCargo</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings"><div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div><div class="loading-logo">N</div></div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Logistics</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Loading notifications...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<div class="app-shell" id="app-shell">
+  <div class="main-area">
+    <div class="page-content">
+
+      <div class="page-header">
+        <div><h1>Notifications</h1><p>Tracking updates and messages from our team</p></div>
+        <button class="btn btn-secondary btn-sm" onclick="markAllNotifsRead()">Mark all read</button>
+      </div>
+
+      <div id="notif-full-list">
+        <div class="card"><div class="table-empty">Loading...</div></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/layout.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw new Error();
+  initLoadingScreen(['Loading notifications...'], 1600);
+
+  async function loadNotifs() {
+    const el = document.getElementById('notif-full-list');
+    try {
+      const data = await api.get('/user/notifications');
+      const notifs = data.notifications || [];
+      if (!notifs.length) {
+        el.innerHTML = '<div class="card"><div class="table-empty">No notifications yet. They will appear here when your shipment is updated.</div></div>';
+        return;
+      }
+      el.innerHTML = notifs.map(n => `
+        <div class="card" style="margin-bottom:10px;${n.is_read ? '' : 'border-color:rgba(245,158,11,0.25);'}" onclick="markOneRead('${n.id}',this)">
+          <div class="card-body" style="display:flex;gap:14px;align-items:flex-start;cursor:pointer;">
+            <div style="font-size:22px;flex-shrink:0;">${n.type==='tracking'?'📍':n.type==='chat'?'💬':'🔔'}</div>
+            <div style="flex:1;">
+              <div style="font-size:13.5px;font-weight:700;color:var(--white);display:flex;align-items:center;gap:8px;">
+                ${n.title}
+                ${!n.is_read ? '<span style="width:7px;height:7px;background:var(--accent);border-radius:50%;display:inline-block;"></span>' : ''}
+              </div>
+              <div style="font-size:12.5px;color:var(--muted);margin-top:4px;line-height:1.5;">${n.message}</div>
+              <div style="font-size:11px;color:var(--faint);margin-top:6px;">${fmtDateTime(n.created_at)}</div>
+            </div>
+          </div>
+        </div>`).join('');
+    } catch(e) {
+      el.innerHTML = `<div class="card"><div class="table-empty">Error loading notifications.</div></div>`;
+    }
+  }
+
+  async function markOneRead(id, card) {
+    try {
+      await api.put('/user/notifications/' + id + '/read');
+      card.style.borderColor = '';
+      const dot = card.querySelector('span[style*="background:var(--accent)"]');
+      if (dot) dot.remove();
+    } catch(e) {}
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initLayout('notifications');
+    loadNotifs();
+  });
+</script>
+</body>
+</html>

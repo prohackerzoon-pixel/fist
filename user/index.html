@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NexaCargo Worldwide — Delivering Trust, Worldwide</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#0b0d18;--bg2:#0f1120;--surface:#131628;--card:#181b2e;
+      --border:#1f2440;--border2:#2a3055;--accent:#f59e0b;--accent2:#fbbf24;
+      --text:#e2e8f0;--muted:#8892a4;--faint:#3d4560;--white:#ffffff;
+      --success:#22c55e;--danger:#ef4444;--info:#3b82f6;
+      --font:'Outfit',sans-serif;--mono:'DM Mono',monospace;
+      --radius:14px;--radius-sm:9px;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:14px;line-height:1.65;-webkit-font-smoothing:antialiased;overflow-x:hidden;}
+    a{color:inherit;text-decoration:none;}
+    button{cursor:pointer;font-family:var(--font);border:none;outline:none;}
+    ::-webkit-scrollbar{width:5px;}
+    ::-webkit-scrollbar-track{background:var(--bg);}
+    ::-webkit-scrollbar-thumb{background:var(--faint);border-radius:10px;}
+    ::-webkit-scrollbar-thumb:hover{background:var(--accent);}
+
+    /* LOADING */
+    #loading-screen{position:fixed;inset:0;background:var(--bg);z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .5s ease,visibility .5s ease;}
+    #loading-screen.hidden{opacity:0;visibility:hidden;pointer-events:none;}
+    .loading-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(245,158,11,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(245,158,11,.05) 1px,transparent 1px);background-size:44px 44px;animation:gridScroll 10s linear infinite;}
+    @keyframes gridScroll{from{background-position:0 0;}to{background-position:44px 44px;}}
+    .loading-rings{position:relative;width:110px;height:110px;display:flex;align-items:center;justify-content:center;margin-bottom:28px;}
+    .ring{position:absolute;border-radius:50%;border:2px solid transparent;}
+    .ring-1{width:110px;height:110px;border-color:rgba(245,158,11,.12);border-style:dashed;animation:spinCW 6s linear infinite;}
+    .ring-2{width:82px;height:82px;border-top-color:var(--accent);border-right-color:transparent;border-bottom-color:var(--accent);border-left-color:transparent;animation:spinCCW 3s linear infinite;}
+    .ring-3{width:54px;height:54px;border-top-color:rgba(245,158,11,.4);border-right-color:transparent;animation:spinCW 1.5s linear infinite;}
+    @keyframes spinCW{to{transform:rotate(360deg);}}
+    @keyframes spinCCW{to{transform:rotate(-360deg);}}
+    .loading-logo{width:42px;height:42px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#000;box-shadow:0 0 28px rgba(245,158,11,.5);position:relative;z-index:1;animation:logoPulse 2s ease-in-out infinite;}
+    @keyframes logoPulse{0%,100%{box-shadow:0 0 16px rgba(245,158,11,.4);}50%{box-shadow:0 0 40px rgba(245,158,11,.8);}}
+    .loading-title{font-size:22px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;background:linear-gradient(90deg,#f59e0b,#fff8e1,#f59e0b,#d97706);background-size:300% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:shimmer 2.5s linear infinite;position:relative;z-index:1;}
+    @keyframes shimmer{from{background-position:0% center;}to{background-position:300% center;}}
+    .loading-subtitle{font-size:10px;color:var(--faint);letter-spacing:.3em;text-transform:uppercase;margin-top:5px;position:relative;z-index:1;}
+    .loading-dots{display:flex;gap:7px;margin-top:24px;position:relative;z-index:1;}
+    .loading-dots span{width:7px;height:7px;background:var(--accent);border-radius:50%;opacity:.3;animation:dotBounce 1.2s ease-in-out infinite;}
+    .loading-dots span:nth-child(2){animation-delay:.2s;}
+    .loading-dots span:nth-child(3){animation-delay:.4s;}
+    @keyframes dotBounce{0%,80%,100%{transform:translateY(0);opacity:.3;}40%{transform:translateY(-9px);opacity:1;}}
+    .loading-msg{font-size:11px;color:var(--faint);margin-top:9px;position:relative;z-index:1;}
+    .loading-tagline{position:absolute;bottom:24px;font-size:10px;color:var(--faint);letter-spacing:.28em;text-transform:uppercase;}
+
+    /* NAVBAR */
+    .navbar{position:fixed;top:0;left:0;right:0;z-index:500;padding:14px 0;transition:all .3s;}
+    .navbar.scrolled{background:rgba(11,13,24,.96);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:10px 0;}
+    .nav-inner{max-width:1100px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;}
+    .nav-logo{display:flex;align-items:center;gap:10px;}
+    .nav-logo-icon{width:34px;height:34px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px;color:#000;box-shadow:0 0 14px rgba(245,158,11,.28);}
+    .nav-logo-text strong{display:block;font-size:13.5px;font-weight:800;color:var(--white);}
+    .nav-logo-text span{font-size:10px;color:var(--faint);}
+    .nav-links{display:flex;align-items:center;gap:4px;}
+    .nav-link{padding:7px 14px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;color:var(--muted);transition:all .2s;}
+    .nav-link:hover{color:var(--white);background:rgba(255,255,255,.05);}
+    .nav-btns{display:flex;align-items:center;gap:8px;}
+    .btn-login{padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--text);background:var(--surface);border:1px solid var(--border);transition:all .2s;}
+    .btn-login:hover{border-color:var(--accent);color:var(--accent);}
+    .btn-signup{padding:8px 18px;border-radius:var(--radius-sm);font-size:13px;font-weight:700;background:var(--accent);color:#000;transition:all .2s;}
+    .btn-signup:hover{background:var(--accent2);transform:translateY(-1px);}
+    .mob-btn{display:none;background:var(--surface);border:1px solid var(--border);color:var(--muted);width:36px;height:36px;border-radius:var(--radius-sm);font-size:18px;align-items:center;justify-content:center;}
+    @media(max-width:640px){.nav-links{display:none;}.mob-btn{display:flex;}}
+
+    /* LAYOUT */
+    .container{max-width:1100px;margin:0 auto;padding:0 20px;}
+    .section{padding:80px 0;}
+    .section-sm{padding:52px 0;}
+    .text-center{text-align:center;}
+    .s-label{font-size:11px;font-weight:700;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+    .s-label::before{content:'';width:20px;height:2px;background:var(--accent);border-radius:2px;}
+    .text-center .s-label{justify-content:center;}
+    .text-center .s-label::before{display:none;}
+    h2.sec{font-size:clamp(24px,4vw,40px);font-weight:900;color:var(--white);line-height:1.12;margin-bottom:10px;}
+    .btn-p{display:inline-flex;align-items:center;gap:7px;padding:12px 24px;border-radius:var(--radius-sm);font-size:13.5px;font-weight:700;background:var(--accent);color:#000;transition:all .2s;cursor:pointer;border:none;}
+    .btn-p:hover{background:var(--accent2);transform:translateY(-2px);box-shadow:0 10px 28px rgba(245,158,11,.3);}
+    .btn-o{display:inline-flex;align-items:center;gap:7px;padding:12px 24px;border-radius:var(--radius-sm);font-size:13.5px;font-weight:600;background:transparent;color:var(--text);border:1.5px solid var(--border2);transition:all .2s;}
+    .btn-o:hover{border-color:var(--accent);color:var(--accent);}
+
+    /* HERO VIDEO */
+    .hero{min-height:100vh;display:flex;align-items:center;position:relative;overflow:hidden;padding:100px 0 60px;}
+    .video-bg{position:absolute;inset:0;z-index:0;}
+    .video-bg video{width:100%;height:100%;object-fit:cover;opacity:.18;}
+    .video-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(11,13,24,.9) 0%,rgba(11,13,24,.6) 50%,rgba(11,13,24,.85) 100%);z-index:1;}
+    .hero .container{position:relative;z-index:2;}
+    .hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center;}
+    @media(max-width:768px){.hero-grid{grid-template-columns:1fr;}.hero-right{display:none;}}
+    .hero-left{animation:fadeUp .6s ease both;}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(24px);}to{opacity:1;transform:translateY(0);}}
+    .hero-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:20px;padding:5px 14px;font-size:11.5px;font-weight:600;color:var(--accent);margin-bottom:18px;}
+    .hero-badge::before{content:'';width:6px;height:6px;background:var(--accent);border-radius:50%;animation:bl 2s ease-in-out infinite;}
+    @keyframes bl{0%,100%{opacity:1;}50%{opacity:.3;}}
+    .hero-title{font-size:clamp(32px,5vw,56px);font-weight:900;color:var(--white);line-height:1.1;letter-spacing:-.02em;margin-bottom:16px;}
+    .hero-title span{color:var(--accent);}
+    .hero-desc{font-size:15px;color:var(--muted);max-width:480px;margin-bottom:32px;line-height:1.75;}
+    .hero-btns{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:44px;}
+    .hero-stats{display:flex;gap:28px;flex-wrap:wrap;}
+    .hs-num{font-size:26px;font-weight:900;color:var(--white);line-height:1;}
+    .hs-num span{color:var(--accent);}
+    .hs-lbl{font-size:11px;color:var(--faint);margin-top:3px;text-transform:uppercase;letter-spacing:.07em;}
+
+    /* FLOATING CARD */
+    .hero-right{position:relative;animation:fadeUp .6s .2s ease both;}
+    .float-card{background:rgba(24,27,46,.96);border:1px solid rgba(245,158,11,.18);border-radius:20px;padding:22px;box-shadow:0 40px 80px rgba(0,0,0,.5);animation:cf 5s ease-in-out infinite;}
+    @keyframes cf{0%,100%{transform:translateY(0);}50%{transform:translateY(-12px);}}
+    .fl-badge{background:rgba(34,197,94,.12);color:#4ade80;font-size:10.5px;font-weight:600;padding:3px 9px;border-radius:20px;}
+    .fl-tid{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent);letter-spacing:.04em;margin:14px 0;}
+    .mt{display:flex;flex-direction:column;gap:0;}
+    .mt-i{display:flex;gap:10px;padding-bottom:12px;}
+    .mt-i:last-child{padding-bottom:0;}
+    .mt-dc{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+    .mt-d{width:9px;height:9px;border-radius:50%;margin-top:3px;}
+    .mt-d.done{background:var(--success);}
+    .mt-d.active{background:var(--accent);box-shadow:0 0 6px rgba(245,158,11,.6);}
+    .mt-d.wait{background:var(--faint);}
+    .mt-line{flex:1;width:1px;background:var(--border);margin:3px 0;}
+    .mt-lb{font-size:12px;font-weight:600;color:var(--white);}
+    .mt-lc{font-size:10.5px;color:var(--muted);margin-top:1px;}
+    .fpill{position:absolute;background:rgba(24,27,46,.96);border:1px solid rgba(245,158,11,.2);border-radius:40px;padding:6px 13px;display:flex;align-items:center;gap:7px;font-size:11px;font-weight:600;color:var(--white);white-space:nowrap;}
+    .fp1{top:-14px;right:-10px;animation:pf 4s ease-in-out infinite;}
+    .fp2{bottom:16px;left:-20px;animation:pf 4s ease-in-out 1.5s infinite;}
+    @keyframes pf{0%,100%{transform:translateY(0);}50%{transform:translateY(-6px);}}
+    .pd{width:7px;height:7px;border-radius:50%;}
+
+    /* MARQUEE */
+    .marquee-bar{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:14px 0;overflow:hidden;}
+    .mq-inner{display:flex;animation:mScroll 26s linear infinite;width:max-content;}
+    .mq-inner:hover{animation-play-state:paused;}
+    @keyframes mScroll{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+    .mi{display:flex;align-items:center;gap:8px;padding:0 32px;font-size:11.5px;font-weight:700;color:var(--faint);letter-spacing:.09em;text-transform:uppercase;border-right:1px solid var(--border);white-space:nowrap;transition:color .2s;}
+    .mi:hover{color:var(--accent);}
+
+    /* TRACK SECTION */
+    .tw{background:var(--card);border:1px solid rgba(245,158,11,.15);border-radius:18px;padding:24px;max-width:680px;margin:0 auto;}
+    .tw-title{font-size:16px;font-weight:800;color:var(--white);margin-bottom:5px;}
+    .tw-sub{font-size:12.5px;color:var(--muted);margin-bottom:18px;}
+    .tr-row{display:flex;gap:10px;}
+    @media(max-width:480px){.tr-row{flex-direction:column;}}
+    .tr-inp{flex:1;background:var(--surface);border:1.5px solid var(--border);color:var(--text);padding:11px 14px;border-radius:var(--radius-sm);font-size:13.5px;font-family:var(--mono);transition:border-color .2s;}
+    .tr-inp:focus{border-color:rgba(245,158,11,.5);outline:none;}
+    .tr-inp::placeholder{color:var(--faint);font-family:var(--font);}
+    .tr-err{margin-top:12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);color:#f87171;padding:10px 14px;border-radius:var(--radius-sm);font-size:12.5px;display:none;}
+    .tr-err.show{display:block;}
+    .tr-res{margin-top:16px;display:none;}
+    .tr-res.show{display:block;}
+    .tr-hdr{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;}
+    .tr-id{font-family:var(--mono);font-size:15px;font-weight:700;color:var(--accent);}
+    .tr-itm{font-size:11.5px;color:var(--muted);margin-top:2px;}
+    .tr-stat{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+    .tr-stat.delivered{background:rgba(34,197,94,.1);color:#4ade80;}
+    .tr-stat.transit{background:rgba(59,130,246,.1);color:#60a5fa;}
+    .tr-stat.pending{background:rgba(250,204,21,.1);color:#facc15;}
+    .tr-stat.other{background:rgba(245,158,11,.1);color:var(--accent);}
+    .tr-tl{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:16px;}
+    .tti{display:flex;gap:12px;padding-bottom:16px;}
+    .tti:last-child{padding-bottom:0;}
+    .tti-dc{display:flex;flex-direction:column;align-items:center;flex-shrink:0;}
+    .tti-d{width:11px;height:11px;border-radius:50%;margin-top:3px;}
+    .tti-d.done{background:var(--success);}
+    .tti-d.cur{background:var(--accent);box-shadow:0 0 8px rgba(245,158,11,.5);}
+    .tti-line{flex:1;width:2px;background:var(--border);margin-top:3px;}
+    .tti-st{font-size:13px;font-weight:600;color:var(--white);}
+    .tti-loc{font-size:11.5px;color:var(--accent);margin-top:2px;}
+    .tti-note{font-size:11px;color:var(--muted);margin-top:2px;font-style:italic;}
+    .tti-time{font-size:11px;color:var(--faint);margin-top:3px;}
+
+    /* STATS BAND */
+    .stats-band{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:48px 0;}
+    .sb-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:0;}
+    @media(max-width:600px){.sb-grid{grid-template-columns:1fr 1fr;}}
+    .sb-item{text-align:center;padding:0 16px;border-right:1px solid var(--border);}
+    .sb-item:last-child{border-right:none;}
+    @media(max-width:600px){.sb-item:nth-child(2){border-right:none;}.sb-item:nth-child(3){border-top:1px solid var(--border);padding-top:28px;}.sb-item:nth-child(4){border-right:none;border-top:1px solid var(--border);padding-top:28px;}}
+    .sb-num{font-size:38px;font-weight:900;color:var(--white);line-height:1;}
+    .sb-num span{color:var(--accent);}
+    .sb-lbl{font-size:11.5px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.08em;}
+
+    /* SERVICES CAROUSEL */
+    .carousel-wrap{overflow:hidden;position:relative;}
+    .carousel-track{display:flex;gap:20px;transition:transform .5s cubic-bezier(.25,.46,.45,.94);}
+    .c-card{min-width:280px;flex-shrink:0;background:var(--card);border:1px solid var(--border);border-radius:18px;overflow:hidden;transition:all .3s;}
+    .c-card:hover{border-color:rgba(245,158,11,.25);transform:translateY(-3px);box-shadow:0 16px 48px rgba(0,0,0,.4);}
+    .c-img{height:170px;overflow:hidden;position:relative;}
+    .c-img img{width:100%;height:100%;object-fit:cover;transition:transform .5s;}
+    .c-card:hover .c-img img{transform:scale(1.06);}
+    .c-body{padding:18px;}
+    .c-icon{font-size:22px;margin-bottom:9px;}
+    .c-body h3{font-size:15px;font-weight:700;color:var(--white);margin-bottom:6px;}
+    .c-body p{font-size:12.5px;color:var(--muted);line-height:1.6;}
+    .c-nav{display:flex;gap:10px;justify-content:center;margin-top:24px;align-items:center;}
+    .c-btn{width:40px;height:40px;border-radius:50%;background:var(--card);border:1px solid var(--border);color:var(--muted);font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;}
+    .c-btn:hover{background:var(--accent);color:#000;border-color:var(--accent);}
+    .c-dots{display:flex;gap:6px;align-items:center;}
+    .c-dot{width:7px;height:7px;border-radius:50%;background:var(--faint);transition:all .3s;cursor:pointer;}
+    .c-dot.active{background:var(--accent);width:20px;border-radius:4px;}
+
+    /* HOW IT WORKS */
+    .hw-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;}
+    @media(max-width:700px){.hw-grid{grid-template-columns:1fr 1fr;}}
+    @media(max-width:420px){.hw-grid{grid-template-columns:1fr;}}
+    .hw-card{text-align:center;padding:24px 16px;background:var(--card);border:1px solid var(--border);border-radius:16px;transition:all .3s;}
+    .hw-card:hover{border-color:rgba(245,158,11,.2);transform:translateY(-3px);}
+    .hw-num{font-size:30px;font-weight:900;color:rgba(245,158,11,.12);line-height:1;margin-bottom:10px;font-family:var(--mono);}
+    .hw-icon{font-size:26px;margin-bottom:12px;}
+    .hw-card h3{font-size:14px;font-weight:700;color:var(--white);margin-bottom:7px;}
+    .hw-card p{font-size:12px;color:var(--muted);line-height:1.6;}
+
+    /* VIDEO SECTION */
+    .vid-wrap{position:relative;border-radius:22px;overflow:hidden;height:420px;}
+    .vid-wrap video{width:100%;height:100%;object-fit:cover;opacity:.65;}
+    .vid-overlay{position:absolute;inset:0;background:linear-gradient(135deg,rgba(11,13,24,.75),rgba(11,13,24,.35));display:flex;align-items:center;padding:50px;}
+
+    /* TESTIMONIALS */
+    .tsl-wrap{overflow:hidden;}
+    .tsl-track{display:flex;transition:transform .5s cubic-bezier(.25,.46,.45,.94);}
+    .tsl-card{min-width:100%;padding:0 4px;}
+    .tsl-inner{background:var(--card);border:1px solid var(--border);border-radius:22px;padding:36px 40px;max-width:720px;margin:0 auto;text-align:center;position:relative;}
+    .tsl-inner::before{content:'"';position:absolute;top:14px;left:24px;font-size:90px;color:rgba(245,158,11,.07);font-family:Georgia,serif;line-height:1;}
+    .tsl-stars{color:var(--accent);font-size:17px;margin-bottom:16px;letter-spacing:2px;}
+    .tsl-text{font-size:16px;color:var(--text);line-height:1.75;margin-bottom:24px;font-style:italic;}
+    .tsl-author{display:flex;align-items:center;gap:12px;justify-content:center;}
+    .tsl-av{width:46px;height:46px;border-radius:50%;object-fit:cover;border:2px solid rgba(245,158,11,.3);}
+    .tsl-name{font-weight:700;color:var(--white);font-size:14px;}
+    .tsl-role{font-size:11.5px;color:var(--muted);}
+    .tsl-dots{display:flex;gap:7px;justify-content:center;margin-top:24px;}
+    .td{width:7px;height:7px;border-radius:50%;background:var(--faint);cursor:pointer;transition:all .3s;}
+    .td.active{background:var(--accent);width:20px;border-radius:4px;}
+
+    /* INDUSTRIES */
+    .ind-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+    @media(max-width:600px){.ind-grid{grid-template-columns:1fr 1fr;}}
+    .ind-card{position:relative;border-radius:16px;overflow:hidden;height:180px;cursor:pointer;}
+    .ind-card img{width:100%;height:100%;object-fit:cover;transition:transform .5s;filter:brightness(.55);}
+    .ind-card:hover img{transform:scale(1.07);filter:brightness(.65);}
+    .ind-label{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;z-index:1;}
+    .ind-label span{font-size:24px;}
+    .ind-label h3{font-size:14px;font-weight:700;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.5);}
+    .ind-border{position:absolute;inset:0;border-radius:16px;border:2px solid transparent;transition:border-color .3s;z-index:2;pointer-events:none;}
+    .ind-card:hover .ind-border{border-color:var(--accent);}
+
+    /* FAQ */
+    .faq-item{border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:8px;overflow:hidden;transition:border-color .2s;}
+    .faq-item.open{border-color:rgba(245,158,11,.25);}
+    .fq{padding:16px 20px;cursor:pointer;display:flex;align-items:center;justify-content:space-between;font-weight:600;font-size:14px;color:var(--white);background:var(--card);transition:background .2s;gap:12px;}
+    .fq:hover{background:rgba(245,158,11,.04);}
+    .fq-icon{font-size:18px;color:var(--accent);flex-shrink:0;transition:transform .3s;}
+    .faq-item.open .fq-icon{transform:rotate(45deg);}
+    .fa{max-height:0;overflow:hidden;transition:max-height .4s ease,padding .3s;background:var(--surface);font-size:13.5px;color:var(--muted);line-height:1.7;padding:0 20px;}
+    .faq-item.open .fa{max-height:200px;padding:14px 20px 18px;}
+
+    /* NEWSLETTER */
+    .nl-section{background:var(--surface);border-top:1px solid var(--border);border-bottom:1px solid var(--border);}
+    .nl-inner{display:flex;align-items:center;justify-content:space-between;gap:36px;flex-wrap:wrap;}
+    .nl-text h3{font-size:20px;font-weight:800;color:var(--white);margin-bottom:5px;}
+    .nl-text p{font-size:13px;color:var(--muted);}
+    .nl-form{display:flex;gap:9px;flex:1;max-width:420px;}
+    .nl-inp{flex:1;background:var(--card);border:1.5px solid var(--border);color:var(--text);padding:11px 16px;border-radius:var(--radius-sm);font-size:13.5px;font-family:var(--font);}
+    .nl-inp:focus{border-color:var(--accent);outline:none;}
+    .nl-inp::placeholder{color:var(--faint);}
+    @media(max-width:600px){.nl-inner{flex-direction:column;}.nl-form{max-width:100%;width:100%;}}
+
+    /* CTA */
+    .cta-box{position:relative;border-radius:24px;overflow:hidden;}
+    .cta-box img{width:100%;height:380px;object-fit:cover;opacity:.22;}
+    .cta-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px;background:linear-gradient(135deg,rgba(11,13,24,.75),rgba(11,13,24,.5));}
+    .cta-overlay h2{font-size:clamp(24px,4vw,44px);font-weight:900;color:var(--white);margin-bottom:12px;}
+    .cta-overlay p{font-size:15px;color:var(--muted);max-width:460px;margin-bottom:28px;}
+    .cta-btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+
+    /* CHAT FAB */
+    .chat-fab{position:fixed;bottom:24px;right:24px;z-index:400;cursor:pointer;}
+    .chat-fab-btn{width:54px;height:54px;background:var(--accent);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 8px 28px rgba(245,158,11,.4);transition:all .3s;animation:fabPulse 3s ease-in-out infinite;}
+    .chat-fab-btn:hover{transform:scale(1.1);}
+    @keyframes fabPulse{0%,100%{box-shadow:0 8px 28px rgba(245,158,11,.4);}50%{box-shadow:0 8px 42px rgba(245,158,11,.65);}}
+    .chat-popup{position:absolute;bottom:64px;right:0;width:280px;background:var(--card);border:1px solid var(--border);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden;display:none;animation:slideUp .25s ease;}
+    .chat-popup.show{display:block;}
+    @keyframes slideUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+    .chat-pop-head{background:linear-gradient(135deg,rgba(245,158,11,.12),rgba(245,158,11,.04));padding:14px 16px;border-bottom:1px solid var(--border);}
+    .chat-pop-head h4{font-size:13.5px;font-weight:700;color:var(--white);}
+    .chat-pop-head p{font-size:11px;color:var(--muted);margin-top:2px;}
+    .chat-messages-pop{padding:14px;display:flex;flex-direction:column;gap:9px;max-height:200px;overflow-y:auto;}
+    .chat-msg-pop{padding:9px 12px;border-radius:12px;font-size:12.5px;line-height:1.5;animation:fadeUp .3s ease;}
+    .chat-msg-pop.admin{background:var(--surface);border:1px solid var(--border);color:var(--text);border-bottom-left-radius:3px;}
+    .chat-msg-pop.typing{color:var(--faint);font-style:italic;}
+    .chat-pop-foot{padding:10px 12px;border-top:1px solid var(--border);display:flex;gap:8px;}
+    .chat-pop-foot a{flex:1;background:var(--accent);color:#000;font-size:12.5px;font-weight:700;padding:9px;border-radius:9px;text-align:center;transition:all .2s;}
+    .chat-pop-foot a:hover{background:var(--accent2);}
+
+    /* FOOTER */
+    footer{background:var(--bg2);border-top:1px solid var(--border);padding:52px 0 24px;}
+    .footer-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:36px;margin-bottom:44px;}
+    @media(max-width:700px){.footer-grid{grid-template-columns:1fr 1fr;}}
+    @media(max-width:420px){.footer-grid{grid-template-columns:1fr;}}
+    .footer-brand p{font-size:13px;color:var(--muted);margin-top:12px;max-width:220px;line-height:1.7;}
+    .fc h4{font-size:12px;font-weight:700;color:var(--white);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px;}
+    .fc a{display:block;font-size:13px;color:var(--muted);padding:3px 0;transition:color .2s;}
+    .fc a:hover{color:var(--accent);}
+    .fb{border-top:1px solid var(--border);padding-top:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+    .fb p{font-size:12px;color:var(--faint);}
+  </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings"><div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div><div class="loading-logo">N</div></div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Logistics</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Loading...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<!-- NAVBAR -->
+<nav class="navbar" id="navbar">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <div class="nav-logo-icon">N</div>
+      <div class="nav-logo-text"><strong>NexaCargo</strong><span>Worldwide</span></div>
+    </a>
+    <div class="nav-links">
+      <a href="#track" class="nav-link">Track</a>
+      <a href="#services" class="nav-link">Services</a>
+      <a href="#how" class="nav-link">How It Works</a>
+      <a href="#testimonials" class="nav-link">Reviews</a>
+      <a href="#faq" class="nav-link">FAQ</a>
+    </div>
+    <div class="nav-btns">
+      <a href="login.html" class="btn-login">Sign In</a>
+      <a href="register.html" class="btn-signup">Get Started →</a>
+    </div>
+    <button class="mob-btn" id="mob-btn">☰</button>
+  </div>
+</nav>
+
+<!-- HERO VIDEO -->
+<section class="hero">
+  <div class="video-bg">
+    <video autoplay muted loop playsinline>
+      <source src="https://videos.pexels.com/video-files/4271076/4271076-uhd_2560_1440_25fps.mp4" type="video/mp4"/>
+    </video>
+  </div>
+  <div class="video-overlay"></div>
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-left">
+        <div class="hero-badge">🌍 Global Logistics Network</div>
+        <h1 class="hero-title">Move Anything.<br>Anywhere.<br><span>Anytime.</span></h1>
+        <p class="hero-desc">NexaCargo delivers your goods safely to 200+ countries — with real-time tracking, personal admin support, and zero surprises.</p>
+        <div class="hero-btns">
+          <a href="register.html" class="btn-p">🚀 Start Shipping Free</a>
+          <a href="login.html" class="btn-o">Sign In →</a>
+        </div>
+        <div class="hero-stats">
+          <div><div class="hs-num">200<span>+</span></div><div class="hs-lbl">Countries</div></div>
+          <div style="width:1px;background:var(--border);height:36px;"></div>
+          <div><div class="hs-num">50K<span>+</span></div><div class="hs-lbl">Shipments</div></div>
+          <div style="width:1px;background:var(--border);height:36px;"></div>
+          <div><div class="hs-num">99<span>%</span></div><div class="hs-lbl">Success</div></div>
+          <div style="width:1px;background:var(--border);height:36px;"></div>
+          <div><div class="hs-num">24<span>/7</span></div><div class="hs-lbl">Support</div></div>
+        </div>
+      </div>
+      <div class="hero-right">
+        <div style="position:relative;padding:16px 28px;">
+          <div class="float-card">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+              <span style="font-size:13px;font-weight:700;color:var(--white);">📦 Live Shipment</span>
+              <span class="fl-badge">● In Transit</span>
+            </div>
+            <div class="fl-tid">NXC-20260412-7841</div>
+            <div class="mt">
+              <div class="mt-i"><div class="mt-dc"><div class="mt-d done"></div><div class="mt-line"></div></div><div><div class="mt-lb">Registered</div><div class="mt-lc">📍 Lagos, Nigeria</div></div></div>
+              <div class="mt-i"><div class="mt-dc"><div class="mt-d done"></div><div class="mt-line"></div></div><div><div class="mt-lb">Departed</div><div class="mt-lc">📍 Lagos Airport</div></div></div>
+              <div class="mt-i"><div class="mt-dc"><div class="mt-d active"></div><div class="mt-line"></div></div><div><div class="mt-lb">In Transit</div><div class="mt-lc">📍 London, UK</div></div></div>
+              <div class="mt-i"><div class="mt-dc"><div class="mt-d wait"></div></div><div><div class="mt-lb" style="color:var(--faint);">Out for Delivery</div><div class="mt-lc" style="color:var(--faint);">📍 New York, USA</div></div></div>
+            </div>
+            <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;">
+              <span style="font-size:11.5px;color:var(--muted);">Est. Delivery</span>
+              <span style="font-size:13px;font-weight:700;color:var(--accent);">Apr 14, 2026</span>
+            </div>
+          </div>
+          <div class="fpill fp1"><div class="pd" style="background:#22c55e;box-shadow:0 0 5px #22c55e;"></div>142 deliveries today</div>
+          <div class="fpill fp2"><div class="pd" style="background:#f59e0b;box-shadow:0 0 5px #f59e0b;"></div>Real-time updates</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MARQUEE -->
+<div class="marquee-bar">
+  <div class="mq-inner">
+    <div class="mi">✈️ Air Freight</div><div class="mi">🚢 Sea Cargo</div><div class="mi">🚛 Road Delivery</div><div class="mi">📦 Express Shipping</div><div class="mi">🌍 200+ Countries</div><div class="mi">📡 Live Tracking</div><div class="mi">💬 24/7 Support</div><div class="mi">🔒 Secure Handling</div><div class="mi">🛃 Customs Clearance</div><div class="mi">🏭 Warehousing</div>
+    <div class="mi">✈️ Air Freight</div><div class="mi">🚢 Sea Cargo</div><div class="mi">🚛 Road Delivery</div><div class="mi">📦 Express Shipping</div><div class="mi">🌍 200+ Countries</div><div class="mi">📡 Live Tracking</div><div class="mi">💬 24/7 Support</div><div class="mi">🔒 Secure Handling</div><div class="mi">🛃 Customs Clearance</div><div class="mi">🏭 Warehousing</div>
+  </div>
+</div>
+
+<!-- TRACK -->
+<section class="section" id="track">
+  <div class="container">
+    <div class="text-center" style="margin-bottom:32px;">
+      <div class="s-label">Instant Tracking</div>
+      <h2 class="sec">Where Is Your Package?</h2>
+      <p style="font-size:13.5px;color:var(--muted);margin-top:6px;">Enter your NexaCargo tracking ID for a real-time status update.</p>
+    </div>
+    <div class="tw">
+      <div class="tw-title">🔍 Track Shipment</div>
+      <div class="tw-sub">Your tracking ID looks like: NXC-20260412-8821</div>
+      <div class="tr-row">
+        <input type="text" class="tr-inp" id="t-input" placeholder="NXC-XXXXXXXX-XXXX"/>
+        <button class="btn-p" onclick="doTrack()" style="white-space:nowrap;">Track →</button>
+      </div>
+      <div class="tr-err" id="t-err"></div>
+      <div class="tr-res" id="t-res"></div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-band">
+  <div class="container">
+    <div class="sb-grid">
+      <div class="sb-item"><div class="sb-num">200<span>+</span></div><div class="sb-lbl">Countries Served</div></div>
+      <div class="sb-item"><div class="sb-num">50K<span>+</span></div><div class="sb-lbl">Packages Delivered</div></div>
+      <div class="sb-item"><div class="sb-num">99<span>%</span></div><div class="sb-lbl">Success Rate</div></div>
+      <div class="sb-item"><div class="sb-num">24<span>/7</span></div><div class="sb-lbl">Live Support</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- SERVICES CAROUSEL -->
+<section class="section" id="services" style="background:var(--bg2);">
+  <div class="container">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:36px;flex-wrap:wrap;gap:16px;">
+      <div><div class="s-label">Our Services</div><h2 class="sec" style="margin-bottom:0;">Everything You Need<br>to Ship Globally</h2></div>
+      <a href="register.html" class="btn-o">View All →</a>
+    </div>
+    <div class="carousel-wrap">
+      <div class="carousel-track" id="c-track">
+        <div class="c-card"><div class="c-img"><img src="https://images.unsplash.com/photo-1570797197190-8e003a00c846?w=600&q=80" alt="Worldwide delivery" loading="lazy"/></div><div class="c-body"><div class="c-icon">🌍</div><h3>Worldwide Delivery</h3><p>Door-to-door delivery across 200+ countries. No destination too far.</p></div></div>
+        <div class="c-card"><div class="c-img"><img src="https://images.unsplash.com/photo-1566576912321-d58ddd7a6088?w=600&q=80" alt="Express" loading="lazy"/></div><div class="c-body"><div class="c-icon">⚡</div><h3>Express Shipping</h3><p>Priority handling for time-critical shipments. Fastest possible delivery.</p></div></div>
+        <div class="c-card"><div class="c-img"><img src="https://images.unsplash.com/photo-1587293852726-70cdb56c2866?w=600&q=80" alt="Pickup" loading="lazy"/></div><div class="c-body"><div class="c-icon">🏠</div><h3>Doorstep Pickup</h3><p>We come to you. Schedule a pickup at your home, office, or warehouse.</p></div></div>
+        <div class="c-card"><div class="c-img"><img src="https://images.unsplash.com/photo-1601598851547-4302969d0614?w=600&q=80" alt="Tracking" loading="lazy"/></div><div class="c-body"><div class="c-icon">📡</div><h3>Real-Time Tracking</h3><p>Admin team updates your location at every checkpoint — live and accurate.</p></div></div>
+        <div class="c-card"><div class="c-img"><img src="https://images.unsplash.com/photo-1553413077-190dd305871c?w=600&q=80" alt="Warehouse" loading="lazy"/></div><div class="c-body"><div class="c-icon">🏭</div><h3>Secure Warehousing</h3><p>Safe monitored storage before final delivery to your destination.</p></div></div>
+        <div class="c-card"><div class="c-img"><img src="https://images.unsplash.com/photo-1542744094-24638eff58bb?w=600&q=80" alt="Customs" loading="lazy"/></div><div class="c-body"><div class="c-icon">🛃</div><h3>Customs Clearance</h3><p>We handle all documentation for smooth international transit.</p></div></div>
+      </div>
+    </div>
+    <div class="c-nav">
+      <button class="c-btn" id="c-prev">←</button>
+      <div class="c-dots" id="c-dots"></div>
+      <button class="c-btn" id="c-next">→</button>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="section" id="how">
+  <div class="container">
+    <div class="text-center" style="margin-bottom:40px;">
+      <div class="s-label">Simple Process</div>
+      <h2 class="sec">How NexaCargo Works</h2>
+    </div>
+    <div class="hw-grid">
+      <div class="hw-card"><div class="hw-num">01</div><div class="hw-icon">📝</div><h3>Create Account</h3><p>Sign up free in seconds. Your details saved for faster shipping every time.</p></div>
+      <div class="hw-card"><div class="hw-num">02</div><div class="hw-icon">📦</div><h3>Place a Request</h3><p>Submit sender & receiver details. Our team reviews and contacts you to confirm.</p></div>
+      <div class="hw-card"><div class="hw-num">03</div><div class="hw-icon">🚀</div><h3>We Register & Ship</h3><p>Admin processes your order and generates your unique tracking ID instantly.</p></div>
+      <div class="hw-card"><div class="hw-num">04</div><div class="hw-icon">📍</div><h3>Track Live</h3><p>Follow every checkpoint from your dashboard until delivered safely.</p></div>
+    </div>
+    <div class="text-center" style="margin-top:36px;"><a href="register.html" class="btn-p">Create Free Account →</a></div>
+  </div>
+</section>
+
+<!-- VIDEO + WHY US -->
+<section class="section" style="padding-top:0;">
+  <div class="container">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:52px;align-items:center;" class="why-grid">
+      <div class="vid-wrap">
+        <video autoplay muted loop playsinline>
+          <source src="https://videos.pexels.com/video-files/3121459/3121459-uhd_2560_1440_25fps.mp4" type="video/mp4"/>
+        </video>
+        <div class="vid-overlay">
+          <div>
+            <div style="font-size:11px;font-weight:700;color:var(--accent);letter-spacing:.15em;text-transform:uppercase;margin-bottom:12px;">Our Operations</div>
+            <h3 style="font-size:24px;font-weight:900;color:#fff;margin-bottom:10px;">Powered by Precision & People</h3>
+            <p style="font-size:13.5px;max-width:340px;color:var(--muted);">Every shipment personally managed. Nothing falls through the cracks.</p>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div class="s-label">Why NexaCargo</div>
+        <h2 class="sec">The Difference Is<br>in the Details</h2>
+        <div style="display:flex;flex-direction:column;gap:18px;margin-top:24px;">
+          <div style="display:flex;gap:14px;align-items:flex-start;"><div style="width:40px;height:40px;background:rgba(245,158,11,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">✅</div><div><h3 style="font-size:14px;margin-bottom:4px;">Admin-Verified Tracking</h3><p style="font-size:12.5px;">Every update verified by our team — no automated guesses.</p></div></div>
+          <div style="display:flex;gap:14px;align-items:flex-start;"><div style="width:40px;height:40px;background:rgba(245,158,11,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">💬</div><div><h3 style="font-size:14px;margin-bottom:4px;">Personal Support</h3><p style="font-size:12.5px;">Chat directly with a real person. Pricing, updates, and concerns handled personally.</p></div></div>
+          <div style="display:flex;gap:14px;align-items:flex-start;"><div style="width:40px;height:40px;background:rgba(245,158,11,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🌍</div><div><h3 style="font-size:14px;margin-bottom:4px;">Truly Global Network</h3><p style="font-size:12.5px;">200+ countries, every continent. NexaCargo goes where others won't.</p></div></div>
+          <div style="display:flex;gap:14px;align-items:flex-start;"><div style="width:40px;height:40px;background:rgba(245,158,11,.1);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;">🔒</div><div><h3 style="font-size:14px;margin-bottom:4px;">Secure & Responsible</h3><p style="font-size:12.5px;">Your shipment is our responsibility. We treat every package as if it were our own.</p></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<style>@media(max-width:768px){.why-grid{grid-template-columns:1fr !important;}}</style>
+
+<!-- INDUSTRIES -->
+<section class="section" style="background:var(--bg2);">
+  <div class="container">
+    <div class="text-center" style="margin-bottom:36px;"><div class="s-label">Industries</div><h2 class="sec">Shipping Solutions for Every Industry</h2></div>
+    <div class="ind-grid">
+      <div class="ind-card"><img src="https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=600&q=80" alt="E-commerce" loading="lazy"/><div class="ind-label"><span>🛒</span><h3>E-Commerce</h3></div><div class="ind-border"></div></div>
+      <div class="ind-card"><img src="https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&q=80" alt="Healthcare" loading="lazy"/><div class="ind-label"><span>🏥</span><h3>Healthcare</h3></div><div class="ind-border"></div></div>
+      <div class="ind-card"><img src="https://images.unsplash.com/photo-1498049794561-7780e7231661?w=600&q=80" alt="Electronics" loading="lazy"/><div class="ind-label"><span>📱</span><h3>Electronics</h3></div><div class="ind-border"></div></div>
+      <div class="ind-card"><img src="https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=600&q=80" alt="Oil" loading="lazy"/><div class="ind-label"><span>🛢️</span><h3>Oil & Gas</h3></div><div class="ind-border"></div></div>
+      <div class="ind-card"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80" alt="Fashion" loading="lazy"/><div class="ind-label"><span>👔</span><h3>Fashion & Retail</h3></div><div class="ind-border"></div></div>
+      <div class="ind-card"><img src="https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=600&q=80" alt="Manufacturing" loading="lazy"/><div class="ind-label"><span>🏭</span><h3>Manufacturing</h3></div><div class="ind-border"></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="section" id="testimonials">
+  <div class="container">
+    <div class="text-center" style="margin-bottom:40px;"><div class="s-label">Customer Reviews</div><h2 class="sec">Trusted by Thousands Worldwide</h2></div>
+    <div class="tsl-wrap">
+      <div class="tsl-track" id="tsl-track">
+        <div class="tsl-card"><div class="tsl-inner"><div class="tsl-stars">★★★★★</div><div class="tsl-text">"NexaCargo shipped my equipment from Lagos to London without a single issue. The live tracking kept me updated every step of the way. Absolutely professional service — I wouldn't use anyone else."</div><div class="tsl-author"><img class="tsl-av" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&q=80" alt="James"/><div><div class="tsl-name">James O.</div><div class="tsl-role">Business Owner, Lagos</div></div></div></div></div>
+        <div class="tsl-card"><div class="tsl-inner"><div class="tsl-stars">★★★★★</div><div class="tsl-text">"I was nervous shipping my phone overseas but the NexaCargo team reassured me through chat and updated me at every stage. It arrived perfectly. Fast, safe and honest — highly recommended."</div><div class="tsl-author"><img class="tsl-av" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&q=80" alt="Sarah"/><div><div class="tsl-name">Sarah M.</div><div class="tsl-role">Customer, Accra</div></div></div></div></div>
+        <div class="tsl-card"><div class="tsl-inner"><div class="tsl-stars">★★★★★</div><div class="tsl-text">"We use NexaCargo for all our B2B international shipments. The admin team is responsive, honest, and we always know exactly where our cargo is. Our business relies on them completely."</div><div class="tsl-author"><img class="tsl-av" src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100&q=80" alt="David"/><div><div class="tsl-name">David K.</div><div class="tsl-role">Operations Manager, Nairobi</div></div></div></div></div>
+        <div class="tsl-card"><div class="tsl-inner"><div class="tsl-stars">★★★★★</div><div class="tsl-text">"The chat support is incredible. I got immediate helpful responses every time. NexaCargo doesn't feel like a faceless company — it feels personal. That's rare in logistics today."</div><div class="tsl-author"><img class="tsl-av" src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&q=80" alt="Amara"/><div><div class="tsl-name">Amara T.</div><div class="tsl-role">Entrepreneur, Abuja</div></div></div></div></div>
+      </div>
+      <div class="tsl-dots" id="tsl-dots"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CEO / COMPANY GOALS -->
+<section class="section" style="background:var(--bg2);">
+  <div class="container">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center;" class="ceo-grid">
+      <div>
+        <div class="s-label">From Our CEO</div>
+        <h2 class="sec">"Logistics Should Feel<br>Personal, Not Mechanical"</h2>
+        <p style="font-size:14px;color:var(--muted);line-height:1.8;margin-bottom:20px;">"When I founded NexaCargo, I had one vision: every customer should feel like they have a dedicated logistics partner — not just a tracking number. We built our entire system around human oversight, personal communication, and real-time transparency.</p>
+        <p style="font-size:14px;color:var(--muted);line-height:1.8;margin-bottom:28px;">Every shipment that moves through NexaCargo is touched by a real person at every stage. That's our promise — and it's why our customers keep coming back."</p>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <img src="https://images.unsplash.com/photo-1560250097-0b93528c311a?w=100&q=80" alt="CEO" style="width:54px;height:54px;border-radius:50%;object-fit:cover;border:2px solid rgba(245,158,11,.3);"/>
+          <div><div style="font-weight:700;color:var(--white);font-size:15px;">Michael A. Osei</div><div style="font-size:12px;color:var(--accent);">Founder & CEO, NexaCargo Worldwide</div></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;border-left:3px solid var(--accent);">
+          <div style="font-size:22px;margin-bottom:10px;">🎯</div>
+          <h3 style="font-size:15px;color:var(--white);margin-bottom:7px;">Our Mission</h3>
+          <p style="font-size:13px;color:var(--muted);line-height:1.6;">To make worldwide shipping transparent, reliable and personal — giving every customer full visibility and control over their shipments.</p>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;border-left:3px solid var(--success);">
+          <div style="font-size:22px;margin-bottom:10px;">🚀</div>
+          <h3 style="font-size:15px;color:var(--white);margin-bottom:7px;">Our Vision 2030</h3>
+          <p style="font-size:13px;color:var(--muted);line-height:1.6;">To become the most trusted logistics brand in Africa and beyond — connecting 500+ countries with a personal touch no competitor can replicate.</p>
+        </div>
+        <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:20px;border-left:3px solid var(--info);">
+          <div style="font-size:22px;margin-bottom:10px;">💡</div>
+          <h3 style="font-size:15px;color:var(--white);margin-bottom:7px;">Our Promise</h3>
+          <p style="font-size:13px;color:var(--muted);line-height:1.6;">Every shipment is handled by a real person. Every update is manually verified. Every customer gets a response within minutes.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<style>@media(max-width:768px){.ceo-grid{grid-template-columns:1fr !important;}}</style>
+
+<!-- FAQ -->
+<section class="section" id="faq">
+  <div class="container">
+    <div style="display:grid;grid-template-columns:1fr 1.5fr;gap:52px;align-items:start;" class="faq-grid">
+      <div style="position:sticky;top:100px;">
+        <div class="s-label">FAQ</div>
+        <h2 class="sec">Frequently Asked<br>Questions</h2>
+        <p style="font-size:13.5px;color:var(--muted);margin-bottom:24px;">Can't find your answer? Chat with our team directly using the button below.</p>
+        <a href="login.html" class="btn-p">💬 Chat With Us →</a>
+      </div>
+      <div>
+        <div class="faq-item"><div class="fq" onclick="toggleFaq(this)">How do I get a tracking ID? <span class="fq-icon">+</span></div><div class="fa">Your tracking ID is provided by our admin team once your shipment is registered. It will be shared via our live chat. It starts with NXC-.</div></div>
+        <div class="faq-item"><div class="fq" onclick="toggleFaq(this)">How do I pay for my shipment? <span class="fq-icon">+</span></div><div class="fa">All payment details are discussed directly with our admin team via live chat. Submit your request and we will reach out to discuss pricing personally.</div></div>
+        <div class="faq-item"><div class="fq" onclick="toggleFaq(this)">How long does delivery take? <span class="fq-icon">+</span></div><div class="fa">Express shipments: 2-5 business days internationally. Standard: 7-14 business days. Your admin team will confirm an estimated delivery date when processing your shipment.</div></div>
+        <div class="faq-item"><div class="fq" onclick="toggleFaq(this)">What items can I ship? <span class="fq-icon">+</span></div><div class="fa">We ship electronics, clothing, documents, medical equipment, commercial goods, and personal effects. Prohibited items include weapons and illegal substances. Contact us for specific guidance.</div></div>
+        <div class="faq-item"><div class="fq" onclick="toggleFaq(this)">Can I track from any device? <span class="fq-icon">+</span></div><div class="fa">Absolutely. Your tracking ID works on any device — phone, tablet, laptop or desktop. Simply enter your ID on our tracking page and see the full live timeline.</div></div>
+        <div class="faq-item"><div class="fq" onclick="toggleFaq(this)">Do I need an account to track? <span class="fq-icon">+</span></div><div class="fa">No. Anyone can track a shipment using just the tracking ID on our homepage — no login required. Creating an account lets you place shipments and manage everything from your dashboard.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+<style>@media(max-width:768px){.faq-grid{grid-template-columns:1fr !important;}}</style>
+
+<!-- NEWSLETTER -->
+<div class="nl-section section-sm">
+  <div class="container">
+    <div class="nl-inner">
+      <div class="nl-text"><h3>Stay in the Loop</h3><p>Get shipping tips, rate updates, and NexaCargo news in your inbox.</p></div>
+      <div class="nl-form">
+        <input type="email" class="nl-inp" id="nl-email" placeholder="Enter your email address"/>
+        <button class="btn-p" onclick="subscribeNl()">Subscribe</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<section class="section">
+  <div class="container">
+    <div class="cta-box">
+      <img src="https://images.unsplash.com/photo-1511376777868-611b54f68947?w=1400&q=80" alt="Ship" loading="lazy"/>
+      <div class="cta-overlay">
+        <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);border-radius:20px;padding:4px 13px;font-size:11px;font-weight:600;color:var(--accent);margin-bottom:14px;">🚀 Get Started Today</div>
+        <h2>Ready to Ship With Confidence?</h2>
+        <p>Join thousands of customers who trust NexaCargo to deliver their goods safely and on time — every time.</p>
+        <div class="cta-btns">
+          <a href="register.html" class="btn-p">Create Free Account →</a>
+          <a href="login.html" class="btn-o">Sign In</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <div class="nav-logo-icon">N</div>
+          <div class="nav-logo-text"><strong style="font-size:14px;color:var(--white);">NexaCargo</strong><span>Worldwide</span></div>
+        </div>
+        <p>Delivering trust across every border. Your shipment, our responsibility — from pickup to destination.</p>
+      </div>
+      <div class="fc"><h4>Quick Links</h4><a href="index.html">Home</a><a href="register.html">Create Account</a><a href="login.html">Sign In</a><a href="dashboard.html">My Dashboard</a></div>
+      <div class="fc"><h4>Services</h4><a href="register.html">Worldwide Delivery</a><a href="register.html">Pickup Service</a><a href="register.html">Express Shipping</a><a href="register.html">Live Tracking</a></div>
+      <div class="fc"><h4>Company</h4><a href="#faq">FAQ</a><a href="login.html">Support Chat</a><a href="#testimonials">Reviews</a></div>
+    </div>
+    <div class="fb"><p>© 2026 NexaCargo Worldwide. All rights reserved.</p><p>"Delivering Trust, Worldwide"</p></div>
+  </div>
+</footer>
+
+<!-- CHAT FAB -->
+<div class="chat-fab" id="chat-fab">
+  <div class="chat-popup" id="chat-popup">
+    <div class="chat-pop-head">
+      <h4>💬 NexaCargo Support</h4>
+      <p>We typically reply within minutes</p>
+    </div>
+    <div class="chat-messages-pop" id="chat-msgs-pop">
+      <div class="chat-msg-pop admin">👋 Hello! Welcome to NexaCargo. How can we help you today?</div>
+    </div>
+    <div class="chat-pop-foot">
+      <a href="login.html">Start Chatting →</a>
+    </div>
+  </div>
+  <div class="chat-fab-btn" onclick="toggleChat()">💬</div>
+</div>
+
+<script>
+const API = 'https://bigg.onrender.com/api';
+
+// Loading
+(function(){
+  const s=document.getElementById('loading-screen');
+  const m=document.getElementById('loading-msg');
+  const msgs=['Loading...','Almost ready...'];
+  let i=0;
+  const iv=setInterval(()=>{i++;if(i<msgs.length){m.style.opacity=0;setTimeout(()=>{m.textContent=msgs[i];m.style.opacity=1;},200);}else clearInterval(iv);},700);
+  setTimeout(()=>{s.classList.add('hidden');setTimeout(()=>s.remove(),500);},1800);
+})();
+
+// If logged in redirect to dashboard
+if(localStorage.getItem('nxc_user_token')){
+  // Don't redirect — they can still visit landing page
+}
+
+// Navbar scroll
+window.addEventListener('scroll',()=>document.getElementById('navbar').classList.toggle('scrolled',scrollY>40));
+
+// Smooth scroll
+document.querySelectorAll('a[href^="#"]').forEach(a=>{
+  a.addEventListener('click',e=>{
+    const id=a.getAttribute('href').slice(1);
+    const el=document.getElementById(id);
+    if(el){e.preventDefault();el.scrollIntoView({behavior:'smooth',block:'start'});}
+  });
+});
+
+// Track
+function tsc(s=''){s=s.toLowerCase();if(s.includes('deliver'))return'delivered';if(s.includes('transit')||s.includes('picked')||s.includes('hub')||s.includes('out for'))return'transit';if(s.includes('pending')||s.includes('registered'))return'pending';return'other';}
+function fdt(d){if(!d)return'';return new Date(d).toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+
+async function doTrack(){
+  const inp=document.getElementById('t-input');
+  const err=document.getElementById('t-err');
+  const res=document.getElementById('t-res');
+  const id=inp.value.trim().toUpperCase();
+  err.classList.remove('show');res.classList.remove('show');
+  if(!id){err.textContent='Please enter a tracking ID.';err.classList.add('show');return;}
+  try{
+    const r=await fetch(`${API}/track/${id}`);
+    const d=await r.json();
+    if(!d.success)throw new Error(d.message);
+    const s=d.shipment;const sc=tsc(s.current_status);
+    res.innerHTML=`
+      <div class="tr-hdr">
+        <div><div class="tr-id">${s.tracking_id}</div><div class="tr-itm">${s.package_description||'Package'} → ${s.receiver_country}</div></div>
+        <div class="tr-stat ${sc}">${s.current_status}</div>
+      </div>
+      <div class="tr-tl">${d.timeline.map((t,i)=>`
+        <div class="tti">
+          <div class="tti-dc"><div class="tti-d ${i===d.timeline.length-1?'cur':'done'}"></div>${i<d.timeline.length-1?'<div class="tti-line"></div>':''}</div>
+          <div><div class="tti-st">${t.status}</div><div class="tti-loc">📍 ${t.location}</div>${t.note?`<div class="tti-note">${t.note}</div>`:''}<div class="tti-time">${fdt(t.updated_at)}</div></div>
+        </div>`).join('')}</div>`;
+    res.classList.add('show');
+  }catch(e){err.textContent=e.message||'Tracking ID not found.';err.classList.add('show');}
+}
+document.getElementById('t-input')?.addEventListener('keydown',e=>{if(e.key==='Enter')doTrack();});
+
+// Carousel
+(function(){
+  const track=document.getElementById('c-track');
+  const dots=document.getElementById('c-dots');
+  if(!track)return;
+  const cards=track.querySelectorAll('.c-card');
+  let cur=0,maxIdx=3;
+  const gap=20;
+
+  function setup(){
+    const w=track.parentElement.offsetWidth;
+    const cw=cards[0]?.offsetWidth||280;
+    const vis=Math.max(1,Math.floor((w+gap)/(cw+gap)));
+    maxIdx=Math.max(0,cards.length-vis);
+    dots.innerHTML='';
+    for(let i=0;i<=maxIdx;i++){
+      const d=document.createElement('div');
+      d.className='c-dot'+(i===0?' active':'');
+      d.onclick=()=>goTo(i);
+      dots.appendChild(d);
+    }
+  }
+  function goTo(idx){
+    cur=Math.max(0,Math.min(idx,maxIdx));
+    const cw=(cards[0]?.offsetWidth||280)+gap;
+    track.style.transform=`translateX(-${cur*cw}px)`;
+    dots.querySelectorAll('.c-dot').forEach((d,i)=>d.classList.toggle('active',i===cur));
+  }
+  document.getElementById('c-prev').onclick=()=>goTo(cur-1);
+  document.getElementById('c-next').onclick=()=>goTo(cur+1);
+  setTimeout(setup,100);
+  window.addEventListener('resize',()=>{setup();goTo(0);});
+  setInterval(()=>goTo(cur>=maxIdx?0:cur+1),4000);
+})();
+
+// Testimonials
+(function(){
+  const track=document.getElementById('tsl-track');
+  const dots=document.getElementById('tsl-dots');
+  if(!track)return;
+  const slides=track.querySelectorAll('.tsl-card');
+  let cur=0;
+  slides.forEach((_,i)=>{const d=document.createElement('div');d.className='td'+(i===0?' active':'');d.onclick=()=>go(i);dots.appendChild(d);});
+  function go(i){cur=i;track.style.transform=`translateX(-${i*100}%)`;dots.querySelectorAll('.td').forEach((d,j)=>d.classList.toggle('active',j===i));}
+  setInterval(()=>go((cur+1)%slides.length),5000);
+})();
+
+// FAQ
+function toggleFaq(q){const item=q.parentElement;const open=item.classList.contains('open');document.querySelectorAll('.faq-item').forEach(i=>i.classList.remove('open'));if(!open)item.classList.add('open');}
+
+// Newsletter
+function subscribeNl(){const e=document.getElementById('nl-email').value.trim();if(!e){alert('Please enter your email.');return;}document.getElementById('nl-email').value='';alert('✅ Subscribed! Thank you for joining the NexaCargo newsletter.');}
+
+// Chat FAB auto-messages
+const chatMsgs=[
+  "👋 Hello! Welcome to NexaCargo. How can we help you today?",
+  "🚀 Did you know? We deliver to 200+ countries worldwide!",
+  "📦 Track your shipment anytime using your NXC tracking ID.",
+  "💬 Our team is available 24/7 to answer your questions.",
+  "✅ Create a free account to place shipments and track everything from your dashboard.",
+];
+let chatMsgIdx=0;
+function toggleChat(){
+  const popup=document.getElementById('chat-popup');
+  popup.classList.toggle('show');
+  if(popup.classList.contains('show')){
+    setTimeout(()=>{
+      const container=document.getElementById('chat-msgs-pop');
+      chatMsgIdx=(chatMsgIdx+1)%chatMsgs.length;
+      const typing=document.createElement('div');
+      typing.className='chat-msg-pop typing';
+      typing.textContent='Support is typing...';
+      container.appendChild(typing);
+      container.scrollTop=container.scrollHeight;
+      setTimeout(()=>{
+        typing.remove();
+        const msg=document.createElement('div');
+        msg.className='chat-msg-pop admin';
+        msg.textContent=chatMsgs[chatMsgIdx];
+        container.appendChild(msg);
+        container.scrollTop=container.scrollHeight;
+      },1200);
+    },800);
+  }
+}
+// Auto show chat after 8s
+setTimeout(()=>{
+  const popup=document.getElementById('chat-popup');
+  if(!popup.classList.contains('show'))popup.classList.add('show');
+},8000);
+</script>
+</body>
+</html>

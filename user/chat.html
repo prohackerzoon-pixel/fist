@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Support Chat — NexaCargo</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings"><div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div><div class="loading-logo">N</div></div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Logistics</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Loading chat...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<div class="app-shell" id="app-shell">
+  <div class="main-area">
+    <div class="page-content">
+
+      <div class="page-header"><div><h1>Support Chat</h1><p>Chat directly with our team — we reply fast</p></div></div>
+
+      <div class="chat-wrap" id="chat-wrap">
+        <div class="chat-header-bar">
+          <div class="chat-support-icon">🎧</div>
+          <div>
+            <div class="chat-support-name">NexaCargo Support</div>
+            <div class="chat-support-status">Online — ready to help</div>
+          </div>
+        </div>
+
+        <!-- Empty / start state -->
+        <div class="chat-empty" id="chat-empty">
+          <div style="font-size:40px;margin-bottom:8px;">💬</div>
+          <div style="font-weight:600;color:var(--white);">Start a Conversation</div>
+          <p>Ask us about your shipment, pricing, or anything else. We're here to help.</p>
+          <div style="width:100%;max-width:380px;margin-top:14px;display:flex;flex-direction:column;gap:10px;">
+            <textarea class="form-control" id="first-msg" rows="3" placeholder="Type your first message here..."></textarea>
+            <button class="btn btn-primary btn-full" onclick="startChat()">Start Chat →</button>
+          </div>
+        </div>
+
+        <!-- Active chat -->
+        <div id="chat-active" style="display:none;flex-direction:column;flex:1;overflow:hidden;">
+          <div class="chat-messages" id="chat-messages"></div>
+          <div class="chat-input-bar">
+            <input type="text" id="chat-input" placeholder="Type a message..."/>
+            <button class="chat-send-btn" onclick="sendMsg()">Send →</button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/layout.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw new Error();
+  initLoadingScreen(['Loading chat...'], 1600);
+
+  const user = Auth.getUser();
+  let sessionId = localStorage.getItem('nxc_chat_session');
+  let pollTimer = null;
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    initLayout('chat');
+    await loadChatHistory();
+  });
+
+  document.getElementById('chat-input')?.addEventListener('keydown', e => { if(e.key==='Enter') sendMsg(); });
+  document.getElementById('first-msg')?.addEventListener('keydown', e => { if(e.key==='Enter' && !e.shiftKey) { e.preventDefault(); startChat(); } });
+
+  async function loadChatHistory() {
+    try {
+      const data = await api.get('/user/chat');
+      if (data.session_id && data.messages.length > 0) {
+        sessionId = data.session_id;
+        localStorage.setItem('nxc_chat_session', sessionId);
+        showActiveChat(data.messages);
+        startPolling();
+      }
+      // else show empty start state
+    } catch(e) {}
+  }
+
+  function showActiveChat(messages) {
+    document.getElementById('chat-empty').style.display  = 'none';
+    const active = document.getElementById('chat-active');
+    active.style.display = 'flex';
+    renderMessages(messages);
+  }
+
+  function renderMessages(messages) {
+    const container = document.getElementById('chat-messages');
+    container.innerHTML = messages.map(m => `
+      <div class="msg-row ${m.sender}">
+        <div class="msg-bubble ${m.sender}">
+          <div>${m.message}</div>
+          <div class="msg-time">${fmtTime(m.created_at)}</div>
+        </div>
+      </div>`).join('');
+    container.scrollTop = container.scrollHeight;
+  }
+
+  async function startChat() {
+    const msgEl = document.getElementById('first-msg');
+    const message = msgEl?.value.trim();
+    if (!message) { alert('Please type a message first.'); return; }
+
+    try {
+      const data = await api.post('/user/chat/start', { message });
+      sessionId = data.session_id;
+      localStorage.setItem('nxc_chat_session', sessionId);
+      showActiveChat([{
+        sender: 'customer',
+        message,
+        created_at: new Date().toISOString()
+      }]);
+      startPolling();
+    } catch(e) {
+      alert('Could not start chat: ' + e.message);
+    }
+  }
+
+  async function sendMsg() {
+    const input = document.getElementById('chat-input');
+    const msg = input.value.trim();
+    if (!msg || !sessionId) return;
+
+    input.value = '';
+    try {
+      await api.post('/user/chat/send', { message: msg, session_id: sessionId });
+      await refreshMessages();
+    } catch(e) { alert('Failed to send: ' + e.message); }
+  }
+
+  async function refreshMessages() {
+    try {
+      const data = await api.get('/user/chat');
+      if (data.messages.length) renderMessages(data.messages);
+    } catch(e) {}
+  }
+
+  function startPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(refreshMessages, 5000);
+  }
+</script>
+</body>
+</html>

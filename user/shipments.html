@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Shipments — NexaCargo</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings"><div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div><div class="loading-logo">N</div></div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Logistics</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Loading shipments...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<div class="app-shell" id="app-shell">
+  <div class="main-area">
+    <div class="page-content">
+
+      <div class="page-header">
+        <div><h1>My Shipments</h1><p id="ship-count">All your shipments</p></div>
+        <a href="place.html" class="btn btn-primary btn-sm">+ Place New</a>
+      </div>
+
+      <!-- Filter -->
+      <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="btn btn-sm btn-secondary active-filter" onclick="filterShipments('')" id="filter-all">All</button>
+        <button class="btn btn-sm btn-secondary" onclick="filterShipments('Pending')" id="filter-pending">Pending</button>
+        <button class="btn btn-sm btn-secondary" onclick="filterShipments('In Transit')" id="filter-transit">In Transit</button>
+        <button class="btn btn-sm btn-secondary" onclick="filterShipments('Delivered')" id="filter-delivered">Delivered</button>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Tracking ID</th><th>Description</th><th>Destination</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody id="ships-body"><tr><td colspan="5" class="table-empty">Loading...</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+.active-filter { background: var(--accent) !important; color: #000 !important; border-color: var(--accent) !important; }
+</style>
+
+<script src="assets/app.js"></script>
+<script src="assets/layout.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw new Error();
+  initLoadingScreen(['Loading shipments...'], 1800);
+
+  async function loadShipments(status = '') {
+    const tbody = document.getElementById('ships-body');
+    tbody.innerHTML = '<tr><td colspan="5" class="table-empty">Loading...</td></tr>';
+    try {
+      const url = '/user/shipments' + (status ? '?status=' + encodeURIComponent(status) : '');
+      const data = await api.get(url);
+      document.getElementById('ship-count').textContent = `${data.total} shipment${data.total !== 1 ? 's' : ''}`;
+      if (!data.shipments.length) {
+        tbody.innerHTML = `<tr><td colspan="5" class="table-empty">No shipments found. <a href="place.html" style="color:var(--accent);">Place one now →</a></td></tr>`;
+        return;
+      }
+      tbody.innerHTML = data.shipments.map(s => `
+        <tr>
+          <td><span class="td-link td-mono" onclick="location.href='shipment-detail.html?id=${s.id}'">${s.tracking_id}</span></td>
+          <td class="td-muted" style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.package_description || '—'}</td>
+          <td class="td-faint">${s.receiver_country}</td>
+          <td>${statusBadge(s.current_status)}</td>
+          <td class="td-faint">${fmtDate(s.created_at)}</td>
+        </tr>`).join('');
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="5" class="table-empty">Error: ${e.message}</td></tr>`;
+    }
+  }
+
+  function filterShipments(status) {
+    document.querySelectorAll('[id^="filter-"]').forEach(b => b.classList.remove('active-filter'));
+    const map = { '': 'filter-all', 'Pending': 'filter-pending', 'In Transit': 'filter-transit', 'Delivered': 'filter-delivered' };
+    document.getElementById(map[status])?.classList.add('active-filter');
+    loadShipments(status);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initLayout('shipments');
+    loadShipments();
+  });
+</script>
+</body>
+</html>

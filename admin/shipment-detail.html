@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Shipment Detail — NexaCargo Admin</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings">
+    <div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div>
+    <div class="loading-logo">N</div>
+  </div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Admin Panel</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Loading shipment...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<div class="app-shell" id="app-shell">
+  <div class="main-area">
+    <div class="page-content">
+
+      <!-- Header -->
+      <div class="page-header">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <button class="btn btn-secondary btn-sm" onclick="history.back()">← Back</button>
+          <div>
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <h1 id="detail-tracking-id" style="font-family:monospace;font-size:20px;">Loading...</h1>
+              <span id="detail-status-badge"></span>
+            </div>
+            <p id="detail-created" style="margin-top:2px;"></p>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn btn-secondary btn-sm" id="edit-btn" onclick="">Edit Details</button>
+          <button class="btn btn-primary btn-sm" id="copy-btn">Copy Tracking ID</button>
+        </div>
+      </div>
+
+      <div class="alert" id="detail-alert"></div>
+
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;" id="detail-grid">
+
+        <!-- Left Column -->
+        <div style="display:flex;flex-direction:column;gap:18px;">
+
+          <!-- Sender Card -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">📤 Sender</span></div>
+            <div class="card-body" id="sender-info"></div>
+          </div>
+
+          <!-- Receiver Card -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">📥 Receiver</span></div>
+            <div class="card-body" id="receiver-info"></div>
+          </div>
+
+          <!-- Package Card -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">📦 Package</span></div>
+            <div class="card-body" id="package-info"></div>
+          </div>
+
+          <!-- Add Tracking Update -->
+          <div class="tracking-form-box">
+            <div class="section-title">🗺️ Add Tracking Update</div>
+            <div class="alert" id="track-alert"></div>
+            <div class="form-row" style="margin-bottom:12px;">
+              <div class="form-group" style="margin:0;">
+                <label class="form-label">Current Location <span class="req">*</span></label>
+                <input type="text" class="form-control" id="track-location" placeholder="e.g. New York, USA" />
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label class="form-label">Status <span class="req">*</span></label>
+                <select class="form-control" id="track-status">
+                  <option value="">— Select Status —</option>
+                  <option>Shipment Registered</option>
+                  <option>Picked Up</option>
+                  <option>In Transit</option>
+                  <option>Arrived at Hub</option>
+                  <option>Customs Clearance</option>
+                  <option>Out for Delivery</option>
+                  <option>Delivered</option>
+                  <option>Delayed</option>
+                  <option>On Hold</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:14px;">
+              <label class="form-label">Note (Optional)</label>
+              <input type="text" class="form-control" id="track-note" placeholder="e.g. Delayed due to weather conditions..." />
+            </div>
+            <button class="btn btn-primary" onclick="addTrackingUpdate()">+ Add Location Update</button>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Timeline -->
+        <div>
+          <div class="card" style="position:sticky;top:20px;">
+            <div class="card-header"><span class="card-title">📍 Tracking Timeline</span></div>
+            <div class="card-body">
+              <div class="timeline" id="timeline-wrap">
+                <div class="table-empty" style="padding:30px 0;">No updates yet.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+  @media(max-width:768px) {
+    #detail-grid { grid-template-columns: 1fr !important; }
+  }
+</style>
+
+<script src="assets/app.js"></script>
+<script src="assets/layout.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw new Error();
+  initLoadingScreen(['Loading shipment...', 'Fetching tracking data...'], 2000);
+
+  const shipmentId = getParam('id');
+  if (!shipmentId) { alert('No shipment ID'); history.back(); }
+
+  let currentTrackingId = '';
+
+  function renderInfoSection(containerId, rows) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+    el.innerHTML = rows.filter(r => r[1]).map(([k,v]) => `
+      <div class="info-row">
+        <span class="info-key">${k}</span>
+        <span class="info-val">${v}</span>
+      </div>`).join('') || '<p style="color:var(--faint);font-size:13px;">No data.</p>';
+  }
+
+  async function loadShipment() {
+    try {
+      const data = await api.get('/admin/shipments/' + shipmentId);
+      const s = data.shipment;
+      currentTrackingId = s.tracking_id;
+
+      document.getElementById('detail-tracking-id').textContent = s.tracking_id;
+      document.getElementById('detail-status-badge').innerHTML = statusBadge(s.current_status);
+      document.getElementById('detail-created').innerHTML = `<span style="color:var(--faint);font-size:12px;">Created ${fmtDateTime(s.created_at)}</span>`;
+      document.getElementById('edit-btn').onclick = () => location.href = `create-shipment.html?edit=${shipmentId}`;
+      document.getElementById('copy-btn').onclick = function() { copyText(s.tracking_id, this); };
+
+      renderInfoSection('sender-info', [
+        ['Full Name', s.sender_name],
+        ['Phone', s.sender_phone],
+        ['Email', s.sender_email],
+        ['Address', s.sender_address],
+      ]);
+      renderInfoSection('receiver-info', [
+        ['Full Name', s.receiver_name],
+        ['Phone', s.receiver_phone],
+        ['Email', s.receiver_email],
+        ['Address', s.receiver_address],
+        ['Country', s.receiver_country],
+      ]);
+      renderInfoSection('package-info', [
+        ['Description', s.package_description],
+        ['Weight', s.weight],
+        ['Service Type', s.service_type?.replace(/_/g,' ')],
+        ['Est. Delivery', s.estimated_delivery ? fmtDate(s.estimated_delivery) : null],
+        ['Current Location', s.current_location],
+      ]);
+
+      renderTimeline(data.timeline);
+    } catch(e) {
+      showAlert('detail-alert', 'Error loading shipment: ' + e.message, 'error');
+    }
+  }
+
+  function renderTimeline(timeline) {
+    const wrap = document.getElementById('timeline-wrap');
+    if (!timeline.length) {
+      wrap.innerHTML = '<div class="table-empty" style="padding:30px 0;">No updates yet.</div>';
+      return;
+    }
+    wrap.innerHTML = timeline.map((t, i) => {
+      const isCurrent = i === timeline.length - 1;
+      return `
+      <div class="timeline-item">
+        <div class="tl-dot-wrap">
+          <div class="tl-dot ${isCurrent ? 'current' : 'done'}"></div>
+          ${i < timeline.length - 1 ? '<div class="tl-line"></div>' : ''}
+        </div>
+        <div class="tl-content">
+          <div class="tl-status">${t.status}</div>
+          <div class="tl-location">📍 ${t.location}</div>
+          ${t.note ? `<div class="tl-note">${t.note}</div>` : ''}
+          <div class="tl-time">${fmtDateTime(t.updated_at)}</div>
+          <button class="tl-del" onclick="deleteUpdate('${t.id}')">✕ remove</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  async function addTrackingUpdate() {
+    const location = document.getElementById('track-location').value.trim();
+    const status   = document.getElementById('track-status').value;
+    const note     = document.getElementById('track-note').value.trim();
+
+    if (!location || !status) {
+      showAlert('track-alert', 'Location and status are required.', 'error');
+      return;
+    }
+
+    try {
+      await api.post('/admin/tracking/' + shipmentId, { location, status, note });
+      showAlert('track-alert', 'Tracking update added!', 'success');
+      document.getElementById('track-location').value = '';
+      document.getElementById('track-status').value = '';
+      document.getElementById('track-note').value = '';
+      loadShipment();
+    } catch(e) {
+      showAlert('track-alert', e.message, 'error');
+    }
+  }
+
+  async function deleteUpdate(updateId) {
+    if (!confirm2('Remove this tracking update?')) return;
+    try {
+      await api.delete('/admin/tracking/update/' + updateId);
+      loadShipment();
+    } catch(e) { alert('Error: ' + e.message); }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadShipment);
+</script>
+</body>
+</html>

@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Users — NexaCargo Admin</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings">
+    <div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div>
+    <div class="loading-logo">N</div>
+  </div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Admin Panel</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Loading users...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<div class="app-shell" id="app-shell">
+  <div class="main-area">
+    <div class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h1>Registered Users</h1>
+          <p id="user-count">All customers who have created an account</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Name</th><th>Email</th><th>Phone</th><th>Country</th><th>Joined</th><th>Actions</th></tr>
+            </thead>
+            <tbody id="users-body">
+              <tr><td colspan="6" class="table-empty">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/layout.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw new Error();
+  initLoadingScreen(['Loading users...'], 1800);
+
+  async function loadUsers() {
+    const tbody = document.getElementById('users-body');
+    try {
+      const data = await api.get('/admin/users');
+      document.getElementById('user-count').textContent = `${data.total} registered users`;
+      if (!data.users.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="table-empty">No users registered yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.users.map(u => `
+        <tr>
+          <td style="font-weight:600;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:32px;height:32px;background:rgba(245,158,11,0.15);border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--accent);font-size:13px;flex-shrink:0;">
+                ${u.name.charAt(0).toUpperCase()}
+              </div>
+              ${u.name}
+            </div>
+          </td>
+          <td class="td-muted">${u.email}</td>
+          <td class="td-faint">${u.phone || '—'}</td>
+          <td class="td-faint">${u.country || '—'}</td>
+          <td class="td-faint">${fmtDate(u.created_at)}</td>
+          <td>
+            <button class="btn btn-xs btn-secondary" onclick="viewUserShipments('${u.id}','${u.name}')">View Shipments</button>
+          </td>
+        </tr>`).join('');
+    } catch(e) {
+      tbody.innerHTML = `<tr><td colspan="6" class="table-empty">Error: ${e.message}</td></tr>`;
+    }
+  }
+
+  function viewUserShipments(userId, userName) {
+    location.href = `shipments.html?user_id=${userId}&user_name=${encodeURIComponent(userName)}`;
+  }
+
+  document.addEventListener('DOMContentLoaded', loadUsers);
+</script>
+</body>
+</html>

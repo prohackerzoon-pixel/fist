@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Requests — NexaCargo Admin</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+  <style>
+    /* STATUS TABS */
+    .tab-bar { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+    .tab-btn {
+      padding:7px 16px; border-radius:8px; font-size:12.5px; font-weight:600;
+      border:1px solid var(--border); background:var(--card); color:var(--muted);
+      cursor:pointer; transition:all .2s;
+    }
+    .tab-btn:hover { color:var(--white); }
+    .tab-btn.active { background:rgba(245,158,11,.1); color:var(--accent); border-color:rgba(245,158,11,.25); }
+    .tab-btn .cnt { background:var(--surface); border-radius:20px; padding:1px 7px; font-size:10.5px; margin-left:5px; }
+    .tab-btn.active .cnt { background:rgba(245,158,11,.15); }
+
+    /* REQUEST CARDS (mobile) */
+    .req-cards { display:none; flex-direction:column; gap:12px; }
+    @media(max-width:700px) { .req-cards { display:flex; } .req-table-wrap { display:none; } }
+    .req-card {
+      background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px;
+      border-left:3px solid var(--border);
+    }
+    .req-card.status-new        { border-left-color:#a78bfa; }
+    .req-card.status-processing { border-left-color:var(--accent); }
+    .req-card.status-converted  { border-left-color:var(--success); }
+    .req-card.status-rejected   { border-left-color:var(--danger); }
+    .req-card-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:8px; }
+    .req-card-name   { font-weight:700; font-size:14px; color:var(--white); }
+    .req-card-row    { display:flex; gap:8px; align-items:flex-start; margin-bottom:7px; font-size:12.5px; }
+    .req-card-label  { color:var(--faint); min-width:70px; flex-shrink:0; font-size:11.5px; text-transform:uppercase; letter-spacing:.05em; }
+    .req-card-val    { color:var(--text); }
+    .req-card-actions { display:flex; gap:7px; flex-wrap:wrap; margin-top:14px; padding-top:12px; border-top:1px solid var(--border); }
+
+    /* EDIT MODAL */
+    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.7); z-index:600; align-items:center; justify-content:center; padding:16px; }
+    .modal-overlay.open { display:flex; }
+    .modal { background:var(--card); border:1px solid var(--border); border-radius:var(--radius); width:100%; max-width:520px; animation:modalIn .2s ease; max-height:90vh; overflow-y:auto; }
+    @keyframes modalIn { from{transform:scale(.95);opacity:0;} to{transform:scale(1);opacity:1;} }
+    .modal-header { padding:16px 20px 12px; border-bottom:1px solid var(--border); display:flex; align-items:center; justify-content:space-between; }
+    .modal-header h3 { font-size:15px; font-weight:700; color:var(--white); }
+    .modal-close { background:none; color:var(--faint); font-size:20px; cursor:pointer; line-height:1; }
+    .modal-close:hover { color:var(--white); }
+    .modal-body { padding:18px 20px; }
+    .modal-footer { padding:12px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+
+    /* REJECT REASON */
+    .reject-modal .modal-header { border-bottom-color:rgba(239,68,68,.2); }
+    .reject-modal { border-color:rgba(239,68,68,.2); }
+
+    /* ACTION CONFIRM */
+    .confirm-icon { font-size:40px; text-align:center; margin-bottom:12px; }
+    .confirm-msg  { text-align:center; font-size:13.5px; color:var(--muted); line-height:1.6; }
+
+    /* STATS ROW */
+    .req-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:20px; }
+    @media(max-width:600px) { .req-stats { grid-template-columns:1fr 1fr; } }
+    .req-stat { background:var(--card); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; }
+    .req-stat-num { font-size:24px; font-weight:800; line-height:1; margin-bottom:4px; }
+    .req-stat-lbl { font-size:11px; color:var(--faint); text-transform:uppercase; letter-spacing:.07em; }
+  </style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings">
+    <div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div>
+    <div class="loading-logo">N</div>
+  </div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Admin Panel</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Loading requests...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<!-- EDIT MODAL -->
+<div class="modal-overlay" id="edit-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>✏️ Edit Request</h3>
+      <button class="modal-close" onclick="closeModal('edit-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-req-id"/>
+      <div class="alert" id="edit-alert"></div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Customer Name <span style="color:var(--accent)">*</span></label>
+          <input type="text" class="form-control" id="edit-name"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone</label>
+          <input type="text" class="form-control" id="edit-phone"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Pickup Address</label>
+        <input type="text" class="form-control" id="edit-pickup"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Delivery Address</label>
+          <input type="text" class="form-control" id="edit-delivery"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Destination Country</label>
+          <input type="text" class="form-control" id="edit-country"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Package Description</label>
+        <textarea class="form-control" id="edit-package" rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Weight</label>
+        <input type="text" class="form-control" id="edit-weight"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('edit-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- REJECT MODAL -->
+<div class="modal-overlay" id="reject-modal">
+  <div class="modal reject-modal">
+    <div class="modal-header">
+      <h3>❌ Reject Request</h3>
+      <button class="modal-close" onclick="closeModal('reject-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="reject-req-id"/>
+      <div class="confirm-icon">❌</div>
+      <p class="confirm-msg" style="margin-bottom:16px;">The customer will be notified that their request was rejected.</p>
+      <div class="form-group">
+        <label class="form-label">Reason (sent to customer)</label>
+        <textarea class="form-control" id="reject-reason" rows="3" placeholder="e.g. Destination not available, Package not eligible, etc..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('reject-modal')">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmReject()">Reject Request</button>
+    </div>
+  </div>
+</div>
+
+<!-- APPROVE MODAL -->
+<div class="modal-overlay" id="approve-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>✅ Approve Request</h3>
+      <button class="modal-close" onclick="closeModal('approve-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="approve-req-id"/>
+      <div class="confirm-icon">✅</div>
+      <p class="confirm-msg">Approve this shipment request? The customer will be notified and you can then convert it into a full shipment.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('approve-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="confirmApprove()">✅ Approve & Notify Customer</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONVERT MODAL -->
+<div class="modal-overlay" id="convert-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>📦 Convert to Shipment</h3>
+      <button class="modal-close" onclick="closeModal('convert-modal')">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="convert-req-id"/>
+      <div class="confirm-icon">📦</div>
+      <p class="confirm-msg">This will create a full shipment from this request and generate a tracking ID. The customer will be notified.</p>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal('convert-modal')">Cancel</button>
+      <button class="btn btn-primary" onclick="goConvert()">Convert → Create Shipment</button>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app-shell" id="app-shell">
+  <div class="main-area">
+    <div class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h1>Shipment Requests</h1>
+          <p>All requests submitted by customers — approve, reject or convert</p>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="req-stats">
+        <div class="req-stat"><div class="req-stat-num" style="color:#a78bfa;" id="cnt-new">—</div><div class="req-stat-lbl">New</div></div>
+        <div class="req-stat"><div class="req-stat-num" style="color:var(--accent);" id="cnt-processing">—</div><div class="req-stat-lbl">Approved</div></div>
+        <div class="req-stat"><div class="req-stat-num" style="color:var(--success);" id="cnt-converted">—</div><div class="req-stat-lbl">Converted</div></div>
+        <div class="req-stat"><div class="req-stat-num" style="color:var(--danger);" id="cnt-rejected">—</div><div class="req-stat-lbl">Rejected</div></div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tab-bar">
+        <button class="tab-btn active" onclick="filterTab('')"          id="tab-all">All <span class="cnt" id="tab-cnt-all">0</span></button>
+        <button class="tab-btn"        onclick="filterTab('new')"       id="tab-new">🆕 New <span class="cnt" id="tab-cnt-new">0</span></button>
+        <button class="tab-btn"        onclick="filterTab('processing')" id="tab-processing">✅ Approved <span class="cnt" id="tab-cnt-processing">0</span></button>
+        <button class="tab-btn"        onclick="filterTab('converted')" id="tab-converted">📦 Converted <span class="cnt" id="tab-cnt-converted">0</span></button>
+        <button class="tab-btn"        onclick="filterTab('rejected')"  id="tab-rejected">❌ Rejected <span class="cnt" id="tab-cnt-rejected">0</span></button>
+      </div>
+
+      <div class="alert" id="req-alert"></div>
+
+      <!-- TABLE (desktop) -->
+      <div class="card req-table-wrap">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Customer</th>
+                <th>Contact</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Package</th>
+                <th>Status</th>
+                <th>Date</th>
+                <th style="min-width:200px;">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="req-body">
+              <tr><td colspan="8" class="table-empty">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CARDS (mobile) -->
+      <div class="req-cards" id="req-cards"></div>
+
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/layout.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw new Error();
+  initLoadingScreen(['Loading requests...','Fetching data...'], 1800);
+
+  let allRequests = [];
+  let currentFilter = '';
+
+  // =============================================
+  // LOAD REQUESTS
+  // =============================================
+  async function loadRequests() {
+    try {
+      const data = await api.get('/admin/requests');
+      allRequests = data.requests || [];
+      updateStats();
+      renderRequests();
+    } catch(e) {
+      document.getElementById('req-body').innerHTML = `<tr><td colspan="8" class="table-empty">Error: ${e.message}</td></tr>`;
+    }
+  }
+
+  function updateStats() {
+    const counts = { new:0, processing:0, converted:0, rejected:0 };
+    allRequests.forEach(r => { if (counts[r.status] !== undefined) counts[r.status]++; });
+
+    document.getElementById('cnt-new').textContent        = counts.new;
+    document.getElementById('cnt-processing').textContent = counts.processing;
+    document.getElementById('cnt-converted').textContent  = counts.converted;
+    document.getElementById('cnt-rejected').textContent   = counts.rejected;
+
+    document.getElementById('tab-cnt-all').textContent        = allRequests.length;
+    document.getElementById('tab-cnt-new').textContent        = counts.new;
+    document.getElementById('tab-cnt-processing').textContent = counts.processing;
+    document.getElementById('tab-cnt-converted').textContent  = counts.converted;
+    document.getElementById('tab-cnt-rejected').textContent   = counts.rejected;
+  }
+
+  function filterTab(status) {
+    currentFilter = status;
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    const map = {'':'tab-all','new':'tab-new','processing':'tab-processing','converted':'tab-converted','rejected':'tab-rejected'};
+    document.getElementById(map[status])?.classList.add('active');
+    renderRequests();
+  }
+
+  function renderRequests() {
+    const filtered = currentFilter ? allRequests.filter(r => r.status === currentFilter) : allRequests;
+    renderTable(filtered);
+    renderCards(filtered);
+  }
+
+  // =============================================
+  // ACTION BUTTONS HTML
+  // =============================================
+  function actionBtns(r) {
+    const id = r.id;
+    const enc = encodeURIComponent(JSON.stringify(r));
+    if (r.status === 'new') {
+      return `
+        <div style="display:flex;flex-wrap:wrap;gap:5px;">
+          <button class="btn btn-xs btn-primary"   onclick="openApprove('${id}')">✅ Approve</button>
+          <button class="btn btn-xs btn-secondary" onclick="openEdit('${enc}')">✏️ Edit</button>
+          <button class="btn btn-xs btn-danger"    onclick="openReject('${id}')">❌ Reject</button>
+        </div>`;
+    }
+    if (r.status === 'processing') {
+      return `
+        <div style="display:flex;flex-wrap:wrap;gap:5px;">
+          <button class="btn btn-xs btn-primary"   onclick="openConvert('${id}','${enc}')">📦 Convert</button>
+          <button class="btn btn-xs btn-secondary" onclick="openEdit('${enc}')">✏️ Edit</button>
+          <button class="btn btn-xs btn-danger"    onclick="openReject('${id}')">❌ Reject</button>
+        </div>`;
+    }
+    if (r.status === 'converted') {
+      return `<span style="color:var(--success);font-size:11.5px;font-weight:600;">📦 Converted to Shipment</span>`;
+    }
+    if (r.status === 'rejected') {
+      return `
+        <div style="display:flex;flex-wrap:wrap;gap:5px;">
+          <span style="color:var(--danger);font-size:11.5px;font-weight:600;">❌ Rejected</span>
+          <button class="btn btn-xs btn-secondary" onclick="openApprove('${id}')">↩ Re-approve</button>
+        </div>`;
+    }
+    return '—';
+  }
+
+  // =============================================
+  // TABLE RENDER
+  // =============================================
+  function renderTable(requests) {
+    const tbody = document.getElementById('req-body');
+    if (!requests.length) {
+      tbody.innerHTML = `<tr><td colspan="8" class="table-empty">No requests found.</td></tr>`;
+      return;
+    }
+    tbody.innerHTML = requests.map(r => `
+      <tr>
+        <td>
+          <div style="font-weight:600;color:var(--white);">${r.sender_name}</div>
+          ${r.user_id ? '<div style="font-size:10.5px;color:var(--accent);margin-top:2px;">👤 Registered User</div>' : '<div style="font-size:10.5px;color:var(--faint);">Guest</div>'}
+        </td>
+        <td>
+          <div class="td-muted" style="font-size:12px;">${r.sender_phone || '—'}</div>
+          <div class="td-faint">${r.sender_email || ''}</div>
+        </td>
+        <td class="td-faint" style="max-width:130px;font-size:12px;">${r.pickup_address || '—'}</td>
+        <td style="font-size:12px;">
+          <div class="td-muted">${r.delivery_address || '—'}</div>
+          ${r.delivery_country ? `<div style="color:var(--accent);font-size:11px;margin-top:2px;">🌍 ${r.delivery_country}</div>` : ''}
+        </td>
+        <td style="font-size:12px;">
+          <div class="td-muted">${r.package_description || '—'}</div>
+          ${r.weight ? `<div class="td-faint">${r.weight}</div>` : ''}
+        </td>
+        <td>${reqBadge(r.status)}</td>
+        <td class="td-faint">${fmtDate(r.created_at)}</td>
+        <td>${actionBtns(r)}</td>
+      </tr>`).join('');
+  }
+
+  // =============================================
+  // CARDS RENDER (mobile)
+  // =============================================
+  function renderCards(requests) {
+    const container = document.getElementById('req-cards');
+    if (!requests.length) {
+      container.innerHTML = `<div class="card"><div class="table-empty">No requests found.</div></div>`;
+      return;
+    }
+    container.innerHTML = requests.map(r => `
+      <div class="req-card status-${r.status}">
+        <div class="req-card-header">
+          <div class="req-card-name">${r.sender_name}</div>
+          ${reqBadge(r.status)}
+        </div>
+        <div class="req-card-row"><span class="req-card-label">From</span><span class="req-card-val">${r.pickup_address||'—'}</span></div>
+        <div class="req-card-row"><span class="req-card-label">To</span><span class="req-card-val">${r.delivery_address||'—'} ${r.delivery_country?'('+r.delivery_country+')':''}</span></div>
+        <div class="req-card-row"><span class="req-card-label">Package</span><span class="req-card-val">${r.package_description||'—'} ${r.weight?'· '+r.weight:''}</span></div>
+        <div class="req-card-row"><span class="req-card-label">Phone</span><span class="req-card-val">${r.sender_phone||'—'}</span></div>
+        <div class="req-card-row"><span class="req-card-label">Date</span><span class="req-card-val">${fmtDate(r.created_at)}</span></div>
+        <div class="req-card-actions">${actionBtns(r)}</div>
+      </div>`).join('');
+  }
+
+  // =============================================
+  // MODALS
+  // =============================================
+  function openModal(id)  { document.getElementById(id).classList.add('open'); }
+  function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+  // Close modal on overlay click
+  document.querySelectorAll('.modal-overlay').forEach(o => {
+    o.addEventListener('click', e => { if (e.target === o) o.classList.remove('open'); });
+  });
+
+  // =============================================
+  // APPROVE
+  // =============================================
+  function openApprove(id) {
+    document.getElementById('approve-req-id').value = id;
+    openModal('approve-modal');
+  }
+  async function confirmApprove() {
+    const id = document.getElementById('approve-req-id').value;
+    try {
+      await api.put('/admin/requests/' + id, { status: 'processing' });
+      closeModal('approve-modal');
+      showAlert('req-alert', '✅ Request approved! Customer has been notified.', 'success');
+      loadRequests();
+    } catch(e) {
+      showAlert('req-alert', '❌ Error: ' + e.message, 'error');
+      closeModal('approve-modal');
+    }
+  }
+
+  // =============================================
+  // REJECT
+  // =============================================
+  function openReject(id) {
+    document.getElementById('reject-req-id').value = id;
+    document.getElementById('reject-reason').value = '';
+    openModal('reject-modal');
+  }
+  async function confirmReject() {
+    const id     = document.getElementById('reject-req-id').value;
+    const reason = document.getElementById('reject-reason').value.trim();
+    try {
+      await api.put('/admin/requests/' + id, { status: 'rejected', admin_note: reason });
+      closeModal('reject-modal');
+      showAlert('req-alert', '❌ Request rejected. Customer has been notified.', 'success');
+      loadRequests();
+    } catch(e) {
+      showAlert('req-alert', '❌ Error: ' + e.message, 'error');
+      closeModal('reject-modal');
+    }
+  }
+
+  // =============================================
+  // EDIT
+  // =============================================
+  function openEdit(enc) {
+    const r = JSON.parse(decodeURIComponent(enc));
+    document.getElementById('edit-req-id').value       = r.id;
+    document.getElementById('edit-name').value         = r.sender_name || '';
+    document.getElementById('edit-phone').value        = r.sender_phone || '';
+    document.getElementById('edit-pickup').value       = r.pickup_address || '';
+    document.getElementById('edit-delivery').value     = r.delivery_address || '';
+    document.getElementById('edit-country').value      = r.delivery_country || '';
+    document.getElementById('edit-package').value      = r.package_description || '';
+    document.getElementById('edit-weight').value       = r.weight || '';
+    document.getElementById('edit-alert').classList.remove('show');
+    openModal('edit-modal');
+  }
+
+  async function saveEdit() {
+    const id = document.getElementById('edit-req-id').value;
+    // We update via status endpoint with PUT — but we need a separate edit endpoint
+    // For now: update the local data and notify with a message
+    // The API update endpoint only takes status, so we show what was changed
+    // and use the convert flow to apply the full changes
+    showAlert('edit-alert', '✅ Use "Convert" to apply these edits as a new shipment with full details.', 'info');
+
+    // Store edited data for convert flow
+    const edited = {
+      id,
+      sender_name:         document.getElementById('edit-name').value,
+      sender_phone:        document.getElementById('edit-phone').value,
+      pickup_address:      document.getElementById('edit-pickup').value,
+      delivery_address:    document.getElementById('edit-delivery').value,
+      delivery_country:    document.getElementById('edit-country').value,
+      package_description: document.getElementById('edit-package').value,
+      weight:              document.getElementById('edit-weight').value,
+    };
+    sessionStorage.setItem('prefill_request', JSON.stringify(edited));
+    sessionStorage.setItem('edit_request_id', id);
+
+    setTimeout(() => {
+      closeModal('edit-modal');
+      showAlert('req-alert', '✏️ Edits saved locally. Click "Convert" on this request to create a shipment with the updated details.', 'info');
+    }, 1800);
+  }
+
+  // =============================================
+  // CONVERT
+  // =============================================
+  function openConvert(id, enc) {
+    document.getElementById('convert-req-id').value = id;
+    // Store for prefill
+    try {
+      const r = JSON.parse(decodeURIComponent(enc));
+      sessionStorage.setItem('prefill_request', JSON.stringify(r));
+    } catch(e) {}
+    openModal('convert-modal');
+  }
+  function goConvert() {
+    const id = document.getElementById('convert-req-id').value;
+    closeModal('convert-modal');
+    location.href = 'create-shipment.html?from_request=' + id;
+  }
+
+  document.addEventListener('DOMContentLoaded', loadRequests);
+</script>
+</body>
+</html>

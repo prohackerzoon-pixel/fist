@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard — NexaCargo Admin</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings">
+    <div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div>
+    <div class="loading-logo">N</div>
+  </div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Admin Panel</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Connecting to server...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<div class="app-shell" id="app-shell">
+  <div class="main-area">
+    <div class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h1>Dashboard</h1>
+          <p>NexaCargo Worldwide — live overview</p>
+        </div>
+        <a href="create-shipment.html" class="btn btn-primary">+ New Shipment</a>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card"><div class="stat-top"><span class="stat-label">Total Shipments</span><span class="stat-icon">📦</span></div><div class="stat-value white" id="s-total">—</div></div>
+        <div class="stat-card"><div class="stat-top"><span class="stat-label">Delivered</span><span class="stat-icon">✅</span></div><div class="stat-value green" id="s-delivered">—</div></div>
+        <div class="stat-card"><div class="stat-top"><span class="stat-label">In Transit</span><span class="stat-icon">🚚</span></div><div class="stat-value blue" id="s-transit">—</div></div>
+        <div class="stat-card"><div class="stat-top"><span class="stat-label">Pending</span><span class="stat-icon">⏳</span></div><div class="stat-value yellow" id="s-pending">—</div></div>
+        <div class="stat-card"><div class="stat-top"><span class="stat-label">New Requests</span><span class="stat-icon">📋</span></div><div class="stat-value purple" id="s-requests">—</div></div>
+        <div class="stat-card"><div class="stat-top"><span class="stat-label">Unread Chats</span><span class="stat-icon">💬</span></div><div class="stat-value amber" id="s-chats">—</div></div>
+        <div class="stat-card"><div class="stat-top"><span class="stat-label">Registered Users</span><span class="stat-icon">👥</span></div><div class="stat-value white" id="s-users">—</div></div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <button class="quick-btn quick-amber" onclick="location.href='create-shipment.html'"><span>📦</span> New Shipment</button>
+        <button class="quick-btn quick-purple" onclick="location.href='requests.html'"><span>📋</span> View Requests</button>
+        <button class="quick-btn quick-blue" onclick="location.href='chat.html'"><span>💬</span> Chat Center</button>
+        <button class="quick-btn quick-green" onclick="location.href='users.html'"><span>👥</span> View Users</button>
+      </div>
+
+      <!-- Recent Shipments -->
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Recent Shipments</span>
+          <a href="shipments.html" class="btn btn-sm btn-secondary">View all →</a>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr><th>Tracking ID</th><th>Sender</th><th>Receiver</th><th>Destination</th><th>Status</th><th>Date</th></tr>
+            </thead>
+            <tbody id="recent-body">
+              <tr><td colspan="6" class="table-empty">Loading...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/layout.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw new Error();
+  initLoadingScreen(['Connecting to server...','Fetching live data...','Almost ready...'], 2400);
+
+  async function loadDashboard() {
+    try {
+      const data = await api.get('/admin/dashboard');
+      const s = data.stats;
+      document.getElementById('s-total').textContent     = s.total_shipments;
+      document.getElementById('s-delivered').textContent = s.delivered;
+      document.getElementById('s-transit').textContent   = s.in_transit;
+      document.getElementById('s-pending').textContent   = s.pending;
+      document.getElementById('s-requests').textContent  = s.new_requests;
+      document.getElementById('s-chats').textContent     = s.unread_chats;
+      document.getElementById('s-users').textContent     = s.total_users || 0;
+
+      const tbody = document.getElementById('recent-body');
+      if (!data.recent_shipments.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="table-empty">No shipments yet. Create your first one!</td></tr>';
+        return;
+      }
+      tbody.innerHTML = data.recent_shipments.map(s => `
+        <tr>
+          <td><span class="td-link td-mono" onclick="location.href='shipment-detail.html?id=${s.id}'">${s.tracking_id}</span></td>
+          <td>${s.sender_name}</td>
+          <td>${s.receiver_name}</td>
+          <td class="td-muted">${s.receiver_country}</td>
+          <td>${statusBadge(s.current_status)}</td>
+          <td class="td-faint">${fmtDate(s.created_at)}</td>
+        </tr>`).join('');
+    } catch(e) {
+      console.error(e);
+      document.getElementById('recent-body').innerHTML = `<tr><td colspan="6" class="table-empty">Could not load data. Check backend connection.</td></tr>`;
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', loadDashboard);
+</script>
+</body>
+</html>

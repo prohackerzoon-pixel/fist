@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Place Shipment — NexaCargo</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings"><div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div><div class="loading-logo">N</div></div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Logistics</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Loading form...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<div class="app-shell" id="app-shell">
+  <div class="main-area">
+    <div class="page-content">
+
+      <div class="page-header">
+        <div><h1>Place a Shipment</h1><p>Your sender details are pre-filled. Fill in the receiver details carefully.</p></div>
+      </div>
+
+      <div class="alert" id="form-success"></div>
+      <div class="alert" id="form-error"></div>
+
+      <!-- SENDER -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-header"><span class="card-title">📤 Your Details (Sender)</span></div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Full Name <span class="req">*</span></label>
+              <input type="text" class="form-control" id="sender_name"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Phone Number</label>
+              <input type="text" class="form-control" id="sender_phone"/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Email Address</label>
+              <input type="email" class="form-control" id="sender_email"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Pickup Address <span class="req">*</span></label>
+              <input type="text" class="form-control" id="pickup_address" placeholder="Your full address for pickup"/>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RECEIVER -->
+      <div class="card" style="margin-bottom:14px;border-color:rgba(245,158,11,0.2);">
+        <div class="card-header" style="background:rgba(245,158,11,0.04);">
+          <span class="card-title" style="color:var(--accent);">📥 Receiver Details</span>
+          <span style="font-size:11px;color:var(--muted);">Who is receiving the package?</span>
+        </div>
+        <div class="card-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Receiver Full Name <span class="req">*</span></label>
+              <input type="text" class="form-control" id="receiver_name" placeholder="e.g. Jane Smith"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Receiver Phone Number</label>
+              <input type="text" class="form-control" id="receiver_phone" placeholder="e.g. +1 800 000 0000"/>
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Receiver Email</label>
+              <input type="email" class="form-control" id="receiver_email" placeholder="receiver@email.com"/>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Destination Country <span class="req">*</span></label>
+              <input type="text" class="form-control" id="delivery_country" placeholder="e.g. United States"/>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Receiver Full Delivery Address <span class="req">*</span></label>
+            <input type="text" class="form-control" id="delivery_address" placeholder="e.g. 456 Main Street, New York, NY 10001"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- PACKAGE -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-header"><span class="card-title">📦 Package Details</span></div>
+        <div class="card-body">
+          <div class="form-group">
+            <label class="form-label">What are you shipping?</label>
+            <textarea class="form-control" id="package_description" placeholder="e.g. iPhone 17, Clothing, Documents, Electronics..."></textarea>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Estimated Weight</label>
+            <input type="text" class="form-control" id="weight" placeholder="e.g. 2.5kg"/>
+          </div>
+        </div>
+      </div>
+
+      <!-- NOTE -->
+      <div style="background:rgba(245,158,11,0.06);border:1px solid rgba(245,158,11,0.15);border-radius:var(--radius-sm);padding:12px 16px;margin-bottom:16px;">
+        <p style="font-size:12.5px;color:var(--muted);">
+          💬 <strong style="color:var(--accent);">Note:</strong> After submitting, our team will review your request and contact you via chat to confirm details and arrange pricing before your shipment is processed.
+        </p>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="submit-btn" onclick="submitShipment()">
+        🚀 Submit Shipment Request
+      </button>
+
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/layout.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw new Error();
+  initLoadingScreen(['Loading form...'], 1600);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    initLayout('place');
+    const user = Auth.getUser();
+    if (user) {
+      document.getElementById('sender_name').value   = user.name    || '';
+      document.getElementById('sender_phone').value  = user.phone   || '';
+      document.getElementById('sender_email').value  = user.email   || '';
+      document.getElementById('pickup_address').value = user.address || '';
+    }
+  });
+
+  async function submitShipment() {
+    const btn = document.getElementById('submit-btn');
+    const body = {
+      sender_name:         document.getElementById('sender_name').value.trim(),
+      sender_phone:        document.getElementById('sender_phone').value.trim(),
+      sender_email:        document.getElementById('sender_email').value.trim(),
+      pickup_address:      document.getElementById('pickup_address').value.trim(),
+      receiver_name:       document.getElementById('receiver_name').value.trim(),
+      receiver_phone:      document.getElementById('receiver_phone').value.trim(),
+      receiver_email:      document.getElementById('receiver_email').value.trim(),
+      delivery_address:    document.getElementById('delivery_address').value.trim(),
+      delivery_country:    document.getElementById('delivery_country').value.trim(),
+      package_description: document.getElementById('package_description').value.trim(),
+      weight:              document.getElementById('weight').value.trim(),
+    };
+
+    document.getElementById('form-success').classList.remove('show');
+    document.getElementById('form-error').classList.remove('show');
+
+    if (!body.sender_name || !body.pickup_address || !body.receiver_name || !body.delivery_address || !body.delivery_country) {
+      showAlert('form-error', 'Please fill in all required fields (marked with *).', 'error');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
+    try {
+      const data = await api.post('/user/shipments', body);
+      showAlert('form-success', data.message, 'success');
+      btn.textContent = '✅ Request Submitted!';
+      btn.style.background = 'var(--success)';
+      // Clear non-sender fields
+      ['receiver_name','receiver_phone','receiver_email','delivery_address','delivery_country','package_description','weight']
+        .forEach(id => { const el = document.getElementById(id); if(el) el.value=''; });
+      setTimeout(() => { btn.disabled=false; btn.textContent='🚀 Submit Shipment Request'; btn.style.background=''; }, 3500);
+    } catch(e) {
+      showAlert('form-error', e.message || 'Something went wrong. Please try again.', 'error');
+      btn.disabled = false;
+      btn.textContent = '🚀 Submit Shipment Request';
+    }
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>My Profile — NexaCargo</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings"><div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div><div class="loading-logo">N</div></div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Logistics</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Loading profile...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<div class="app-shell" id="app-shell">
+  <div class="main-area">
+    <div class="page-content">
+
+      <div class="page-header"><div><h1>My Profile</h1><p>Manage your account details</p></div></div>
+
+      <!-- Avatar + name -->
+      <div style="display:flex;align-items:center;gap:16px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:16px;">
+        <div class="profile-avatar-big" id="prof-avatar">U</div>
+        <div>
+          <div style="font-size:17px;font-weight:800;color:var(--white);" id="prof-name">—</div>
+          <div style="font-size:12.5px;color:var(--muted);" id="prof-email">—</div>
+          <div style="font-size:11.5px;color:var(--faint);margin-top:3px;" id="prof-since">—</div>
+        </div>
+      </div>
+
+      <!-- Edit Profile -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-header"><span class="card-title">✏️ Edit Profile</span></div>
+        <div class="card-body">
+          <div class="alert" id="profile-success"></div>
+          <div class="alert" id="profile-error"></div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Full Name</label><input type="text" class="form-control" id="edit-name"/></div>
+            <div class="form-group"><label class="form-label">Phone Number</label><input type="text" class="form-control" id="edit-phone"/></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Country</label><input type="text" class="form-control" id="edit-country"/></div>
+            <div class="form-group"><label class="form-label">Address</label><input type="text" class="form-control" id="edit-address"/></div>
+          </div>
+          <button class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+        </div>
+      </div>
+
+      <!-- Change Password -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-header"><span class="card-title">🔒 Change Password</span></div>
+        <div class="card-body">
+          <div class="alert" id="pw-success"></div>
+          <div class="alert" id="pw-error"></div>
+          <div class="form-group"><label class="form-label">Current Password</label><input type="password" class="form-control" id="cur-pw" placeholder="••••••••"/></div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">New Password</label><input type="password" class="form-control" id="new-pw" placeholder="Min. 6 characters"/></div>
+            <div class="form-group"><label class="form-label">Confirm New Password</label><input type="password" class="form-control" id="conf-pw" placeholder="Repeat new password"/></div>
+          </div>
+          <button class="btn btn-secondary" onclick="changePassword()">Update Password</button>
+        </div>
+      </div>
+
+      <!-- Danger Zone -->
+      <div class="card" style="border-color:rgba(239,68,68,0.2);">
+        <div class="card-header" style="border-color:rgba(239,68,68,0.15);"><span class="card-title" style="color:var(--danger);">⚠️ Sign Out</span></div>
+        <div class="card-body">
+          <p style="font-size:12.5px;color:var(--muted);margin-bottom:14px;">You will be signed out and redirected to the login page.</p>
+          <button class="btn btn-danger" onclick="Auth.logout()">Sign Out</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/layout.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw new Error();
+  initLoadingScreen(['Loading profile...'], 1600);
+
+  document.addEventListener('DOMContentLoaded', async () => {
+    initLayout('profile');
+    await loadProfile();
+  });
+
+  async function loadProfile() {
+    try {
+      const data = await api.get('/auth/profile');
+      const u = data.user;
+      document.getElementById('prof-avatar').textContent = u.name?.charAt(0).toUpperCase() || 'U';
+      document.getElementById('prof-name').textContent   = u.name;
+      document.getElementById('prof-email').textContent  = u.email;
+      document.getElementById('prof-since').textContent  = 'Member since ' + fmtDate(u.created_at);
+      document.getElementById('edit-name').value    = u.name    || '';
+      document.getElementById('edit-phone').value   = u.phone   || '';
+      document.getElementById('edit-country').value = u.country || '';
+      document.getElementById('edit-address').value = u.address || '';
+    } catch(e) {}
+  }
+
+  async function saveProfile() {
+    const body = {
+      name:    document.getElementById('edit-name').value.trim(),
+      phone:   document.getElementById('edit-phone').value.trim(),
+      country: document.getElementById('edit-country').value.trim(),
+      address: document.getElementById('edit-address').value.trim(),
+    };
+    try {
+      const data = await api.put('/auth/profile', body);
+      // Update local storage
+      const stored = Auth.getUser();
+      Auth.save(Auth.getToken(), { ...stored, ...data.user });
+      showAlert('profile-success', 'Profile updated successfully!', 'success');
+      document.getElementById('prof-name').textContent = data.user.name;
+      document.getElementById('prof-avatar').textContent = data.user.name?.charAt(0).toUpperCase();
+    } catch(e) {
+      showAlert('profile-error', e.message, 'error');
+    }
+  }
+
+  async function changePassword() {
+    const cur  = document.getElementById('cur-pw').value;
+    const nw   = document.getElementById('new-pw').value;
+    const conf = document.getElementById('conf-pw').value;
+
+    if (!cur || !nw || !conf) { showAlert('pw-error', 'Please fill in all password fields.', 'error'); return; }
+    if (nw !== conf) { showAlert('pw-error', 'New passwords do not match.', 'error'); return; }
+    if (nw.length < 6) { showAlert('pw-error', 'New password must be at least 6 characters.', 'error'); return; }
+
+    try {
+      await api.put('/auth/change-password', { current_password: cur, new_password: nw });
+      showAlert('pw-success', 'Password changed successfully!', 'success');
+      ['cur-pw','new-pw','conf-pw'].forEach(id => document.getElementById(id).value = '');
+    } catch(e) {
+      showAlert('pw-error', e.message, 'error');
+    }
+  }
+</script>
+</body>
+</html>

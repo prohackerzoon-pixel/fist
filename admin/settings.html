@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Settings — NexaCargo Admin</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings">
+    <div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div>
+    <div class="loading-logo">N</div>
+  </div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Admin Panel</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Loading settings...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<div class="app-shell" id="app-shell">
+  <div class="main-area">
+    <div class="page-content">
+
+      <div class="page-header">
+        <div>
+          <h1>Settings</h1>
+          <p>Manage your admin account and panel</p>
+        </div>
+      </div>
+
+      <div style="max-width:680px;display:flex;flex-direction:column;gap:20px;">
+
+        <!-- Your Account -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">👤 Your Account</span></div>
+          <div class="card-body">
+            <div style="display:flex;align-items:center;gap:16px;background:var(--surface);padding:16px;border-radius:var(--radius-sm);border:1px solid var(--border);">
+              <div class="admin-avatar" id="set-avatar" style="width:48px;height:48px;font-size:20px;">A</div>
+              <div>
+                <div style="font-weight:700;color:#fff;font-size:15px;" id="set-name">Admin</div>
+                <div style="color:var(--muted);font-size:13px;margin-top:2px;" id="set-email">—</div>
+                <div style="margin-top:6px;" id="set-role-badge"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Company Info -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">🌍 Company Information</span></div>
+          <div class="card-body">
+            <div class="info-row"><span class="info-key">Company Name</span><span class="info-val" style="color:#fff;font-weight:600;">NexaCargo Worldwide</span></div>
+            <div class="info-row"><span class="info-key">Tagline</span><span class="info-val">"Delivering Trust, Worldwide"</span></div>
+            <div class="info-row"><span class="info-key">Coverage</span><span class="info-val">Worldwide</span></div>
+            <div class="info-row"><span class="info-key">Services</span><span class="info-val">Pickup & Delivery</span></div>
+            <div class="info-row"><span class="info-key">Default Login Email</span><span class="info-val td-mono" style="color:var(--accent);">admin@nexacargo.com</span></div>
+          </div>
+        </div>
+
+        <!-- Create New Admin (super_admin only) -->
+        <div class="card" id="create-admin-card">
+          <div class="card-header"><span class="card-title">➕ Create New Admin Account</span></div>
+          <div class="card-body">
+            <div class="alert" id="admin-alert"></div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <input type="text" class="form-control" id="new-admin-name" placeholder="Agent Name"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Email</label>
+                <input type="email" class="form-control" id="new-admin-email" placeholder="agent@nexacargo.com"/>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" class="form-control" id="new-admin-password" placeholder="••••••••"/>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Role</label>
+                <select class="form-control" id="new-admin-role">
+                  <option value="agent">Agent</option>
+                  <option value="super_admin">Super Admin</option>
+                </select>
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="createAdmin()">Create Admin Account</button>
+          </div>
+        </div>
+
+        <!-- API Info -->
+        <div class="card">
+          <div class="card-header"><span class="card-title">🔌 API & Endpoints</span></div>
+          <div class="card-body">
+            <div id="api-rows">
+              ${[
+                ['Backend URL','https://bigg.onrender.com'],
+                ['Track Public','GET /api/track/:tracking_id'],
+                ['Admin Login','POST /api/admin/login'],
+                ['Create Shipment','POST /api/admin/shipments'],
+                ['Update Tracking','POST /api/admin/tracking/:id'],
+              ].map(([k,v]) => `
+                <div class="info-row">
+                  <span class="info-key">${k}</span>
+                  <span class="info-val td-mono" style="color:var(--accent);font-size:12px;">${v}</span>
+                </div>`).join('')}
+            </div>
+          </div>
+        </div>
+
+        <!-- Danger Zone -->
+        <div class="card" style="border-color:rgba(239,68,68,0.2);">
+          <div class="card-header" style="border-color:rgba(239,68,68,0.15);">
+            <span class="card-title" style="color:var(--danger);">⚠️ Danger Zone</span>
+          </div>
+          <div class="card-body">
+            <p style="font-size:13px;color:var(--muted);margin-bottom:14px;">
+              Sign out of your admin session. You will be redirected to the login page.
+            </p>
+            <button class="btn btn-danger" onclick="Auth.logout()">Sign Out Now</button>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script src="assets/layout.js"></script>
+<script>
+  if (!Auth.requireAuth()) throw new Error();
+  initLoadingScreen(['Loading settings...'], 1700);
+
+  document.addEventListener('DOMContentLoaded', () => {
+    const admin = Auth.getAdmin();
+    if (!admin) return;
+
+    document.getElementById('set-avatar').textContent = admin.name?.charAt(0).toUpperCase() || 'A';
+    document.getElementById('set-name').textContent = admin.name;
+    document.getElementById('set-email').textContent = admin.email;
+    document.getElementById('set-role-badge').innerHTML =
+      `<span class="badge ${admin.role === 'super_admin' ? 'badge-super' : 'badge-agent'}">${admin.role?.replace('_',' ')}</span>`;
+
+    if (admin.role !== 'super_admin') {
+      const card = document.getElementById('create-admin-card');
+      if (card) card.style.display = 'none';
+    }
+  });
+
+  async function createAdmin() {
+    const name  = document.getElementById('new-admin-name').value.trim();
+    const email = document.getElementById('new-admin-email').value.trim();
+    const password = document.getElementById('new-admin-password').value;
+    const role  = document.getElementById('new-admin-role').value;
+
+    if (!name || !email || !password) {
+      showAlert('admin-alert', 'Name, email and password are required.', 'error');
+      return;
+    }
+
+    try {
+      await api.post('/admin/create-admin', { name, email, password, role });
+      showAlert('admin-alert', `Admin account created for ${name}!`, 'success');
+      document.getElementById('new-admin-name').value = '';
+      document.getElementById('new-admin-email').value = '';
+      document.getElementById('new-admin-password').value = '';
+    } catch(e) {
+      showAlert('admin-alert', e.message, 'error');
+    }
+  }
+</script>
+</body>
+</html>

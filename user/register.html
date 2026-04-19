@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create Account — NexaCargo</title>
+  <link rel="stylesheet" href="assets/styles.css"/>
+</head>
+<body>
+
+<div id="loading-screen">
+  <div class="loading-grid"></div>
+  <div class="loading-rings"><div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div><div class="loading-logo">N</div></div>
+  <h1 class="loading-title">NexaCargo</h1>
+  <p class="loading-subtitle">Worldwide Logistics</p>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+  <p class="loading-msg" id="loading-msg">Loading...</p>
+  <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
+</div>
+
+<div class="auth-page">
+  <div class="auth-bg"></div>
+  <div class="auth-box">
+    <div class="auth-logo">
+      <div class="auth-logo-icon">N</div>
+      <h1>NexaCargo Worldwide</h1>
+      <p>Create your account to start shipping</p>
+    </div>
+    <div class="auth-card">
+      <h2>Create Account</h2>
+      <div class="alert" id="reg-error"></div>
+      <div class="alert" id="reg-success"></div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Full Name <span class="req">*</span></label>
+          <input type="text" class="form-control" id="name" placeholder="John Doe"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone Number</label>
+          <input type="text" class="form-control" id="phone" placeholder="+234..."/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Address <span class="req">*</span></label>
+        <input type="email" class="form-control" id="email" placeholder="john@email.com"/>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Country</label>
+          <input type="text" class="form-control" id="country" placeholder="e.g. Nigeria"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password <span class="req">*</span></label>
+          <input type="password" class="form-control" id="password" placeholder="Min. 6 characters"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Address</label>
+        <input type="text" class="form-control" id="address" placeholder="Your street address"/>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="reg-btn" onclick="doRegister()">
+        Create Account →
+      </button>
+    </div>
+    <div class="auth-switch">Already have an account? <a href="login.html">Sign in</a></div>
+    <div class="auth-footer">NexaCargo Worldwide © 2026</div>
+  </div>
+</div>
+
+<script src="assets/app.js"></script>
+<script>
+  Auth.redirectIfLoggedIn();
+  initLoadingScreen(['Loading...'], 1400);
+
+  document.getElementById('password').addEventListener('keydown', e => { if(e.key==='Enter') doRegister(); });
+
+  async function doRegister() {
+    const btn = document.getElementById('reg-btn');
+    const body = {
+      name:     document.getElementById('name').value.trim(),
+      phone:    document.getElementById('phone').value.trim(),
+      email:    document.getElementById('email').value.trim(),
+      password: document.getElementById('password').value,
+      country:  document.getElementById('country').value.trim(),
+      address:  document.getElementById('address').value.trim(),
+    };
+    document.getElementById('reg-error').classList.remove('show');
+
+    if (!body.name || !body.email || !body.password) {
+      showAlert('reg-error', 'Please fill in name, email and password.', 'error'); return;
+    }
+    btn.disabled = true; btn.textContent = 'Creating account...';
+    try {
+      const data = await api.post('/auth/register', body);
+      Auth.save(data.token, data.user);
+      btn.textContent = '✅ Account created!';
+      btn.style.background = 'var(--success)';
+      showAlert('reg-success', 'Welcome to NexaCargo! Redirecting to your dashboard...', 'success');
+      setTimeout(() => location.href = 'dashboard.html', 1200);
+    } catch(e) {
+      showAlert('reg-error', e.message || 'Registration failed. Please try again.', 'error');
+      btn.disabled = false; btn.textContent = 'Create Account →';
+    }
+  }
+</script>
+</body>
+</html>
