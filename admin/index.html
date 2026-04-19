@@ -1,36 +1,98 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8"/>
-  <title>NexaCargo Admin</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login — NexaCargo Admin</title>
   <link rel="stylesheet" href="assets/styles.css"/>
 </head>
 <body>
+
+<!-- LOADING SCREEN -->
 <div id="loading-screen">
   <div class="loading-grid"></div>
   <div class="loading-rings">
-    <div class="ring ring-1"></div><div class="ring ring-2"></div><div class="ring ring-3"></div>
+    <div class="ring ring-1"></div>
+    <div class="ring ring-2"></div>
+    <div class="ring ring-3"></div>
     <div class="loading-logo">N</div>
   </div>
   <h1 class="loading-title">NexaCargo</h1>
   <p class="loading-subtitle">Worldwide Admin Panel</p>
-  <div class="loading-dots"><span></span><span></span><span></span></div>
-  <p class="loading-msg" id="loading-msg">Starting up...</p>
+  <div class="loading-dots">
+    <span></span><span></span><span></span>
+  </div>
+  <p class="loading-msg" id="loading-msg">Initializing...</p>
   <p class="loading-tagline">"Delivering Trust, Worldwide"</p>
 </div>
+
+<!-- LOGIN PAGE -->
+<div class="login-page">
+  <div class="login-bg"></div>
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="login-logo-icon">N</div>
+      <h1>NexaCargo Worldwide</h1>
+      <p>Admin Control Panel</p>
+    </div>
+    <div class="login-card">
+      <h2>Sign in to your account</h2>
+      <div class="alert alert-error" id="login-error"></div>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input type="email" class="form-control" id="email" placeholder="admin@nexacargo.com" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" class="form-control" id="password" placeholder="••••••••" />
+      </div>
+      <button class="btn btn-primary btn-full" id="login-btn" onclick="doLogin()">
+        Sign In →
+      </button>
+    </div>
+    <p class="login-footer">NexaCargo Worldwide © 2026 — Admin Only</p>
+  </div>
+</div>
+
 <script src="assets/app.js"></script>
 <script>
-  const msgs = ['Starting up...', 'Checking session...', 'Redirecting...'];
-  let i = 0;
-  const msgEl = document.getElementById('loading-msg');
-  const iv = setInterval(() => {
-    i++;
-    if (i < msgs.length) { msgEl.style.opacity=0; setTimeout(()=>{ msgEl.textContent=msgs[i]; msgEl.style.opacity=1; },150); }
-  }, 600);
-  setTimeout(() => {
-    clearInterval(iv);
-    window.location.href = Auth.isLoggedIn() ? 'dashboard.html' : 'login.html';
-  }, 2000);
+  // If already logged in, redirect
+  if (Auth.isLoggedIn()) window.location.href = 'dashboard.html';
+
+  initLoadingScreen(['Initializing...', 'Loading login...'], 1800);
+
+  document.getElementById('password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') doLogin();
+  });
+
+  async function doLogin() {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('login-btn');
+    const errEl = document.getElementById('login-error');
+
+    if (!email || !password) {
+      showAlert('login-error', 'Please enter email and password.', 'error');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Signing in...';
+    errEl.classList.remove('show');
+
+    try {
+      const data = await api.post('/admin/login', { email, password });
+      localStorage.setItem('nexacargo_token', data.token);
+      localStorage.setItem('nexacargo_admin', JSON.stringify(data.admin));
+      btn.textContent = '✅ Success! Redirecting...';
+      btn.style.background = 'var(--success)';
+      setTimeout(() => window.location.href = 'dashboard.html', 800);
+    } catch(err) {
+      showAlert('login-error', err.message || 'Invalid email or password.', 'error');
+      btn.disabled = false;
+      btn.textContent = 'Sign In →';
+    }
+  }
 </script>
 </body>
 </html>
